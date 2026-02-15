@@ -1,0 +1,32 @@
+{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":1,"price":80000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771145695468}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771145711277}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771145711325}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771145711326}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771145713104}
+{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771145744417}
+{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771145761761}
+{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":6.1,"price":272000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146409755}
+{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":15.1,"price":390000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146426893}
+{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":2,"price":135000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146437273}
+{"location":"index.html:saveOrderFromPanel","message":"pre-save orderData","data":{"vendor":"松林建設","relEstId":"0000007-00","itemCount":3,"items":[{"category":"発注","product":"プレキャストL型","spec":"ハイタッチウォール H3750","qty":6.1,"unit":"m","cost":1000,"amount":6100},{"category":"発注","product":"プレキャストL型","spec":"ハイタッチウォール H4500","qty":15.1,"unit":"m","cost":1000,"amount":15100},{"category":"発注","product":"プレキャストL型","spec":"SL-IV H2500","qty":2,"unit":"m","cost":1000,"amount":2000}],"hypothesisId":"H3,H4"},"timestamp":1771146438524}
+{"location":"index.html:saveOrderFromPanel","message":"response received","data":{"res":"{\"success\":true,\"count\":3}","hypothesisId":"H3"},"timestamp":1771146441081}
+{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":15,"ids":["0000022-00","0000014-00","0000015-00","0000016-00","0000013-00"],"hypothesisId":"H5"},"timestamp":1771146442954}
+{"location":"index.html:saveOrderFromPanel","message":"post-fetchOrders","data":{"ordersCount":15,"hypothesisId":"H5"},"timestamp":1771146442954}
+{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771146475140}
+{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771146486520}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771147657452}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771147657501}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771147657503}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771147659831}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771148226042}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771148226089}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771148226091}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771148227667}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771148734712}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771148734762}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771148734764}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771148736404}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771149623515}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771149623564}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771149623566}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771149626130}
