@@ -196,3 +196,40 @@
 {"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771211269385,"hypothesisId":"B,E"}
 {"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771211269386,"hypothesisId":"B"}
 {"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771211272712,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771212045606}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771212045665}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771212045667}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771212046971}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771212068110,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771212071952,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771212071952,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771212074973,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771212213881}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771212213935}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771212213938}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771212215319}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771212259279,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771212262250,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771212262250,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771212264238,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771212303828,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771212455218}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771212455273}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771212455275}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771212456775}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771212476397,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771212479654,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771212479654,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771212482121,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771212497814,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771212721567}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771212721666}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771212721670}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771212722993}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771212914804}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771212914860}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771212914862}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771212917689}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771212920372,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1672},"timestamp":1771212923494,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771212923494,"hypothesisId":"B"}

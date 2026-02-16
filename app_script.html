@@ -323,10 +323,20 @@
                 }
             };
 
-            const openLeftPanel = (mode, rowIndex = null) => {
+            const openLeftPanel = async (mode, rowIndex = null) => {
                 leftPanelMode.value = mode;
                 if (rowIndex !== null) {
                     activeLeftPanelRow.value = rowIndex;
+                }
+                // 単価マスタ時: 未読込なら遅延取得
+                if (mode === 'price' && unifiedProducts.value.length === 0) {
+                    loadingMessage.value = '単価マスタ読込中';
+                    loading.value = true;
+                    try {
+                        const productsJson = await gas('apiGetUnifiedProducts');
+                        unifiedProducts.value = JSON.parse(productsJson);
+                    } catch(e) { console.error(e); }
+                    finally { loading.value = false; }
                 }
                 // セット検索時は初期データをロード
                 if (mode === 'set' && setMasters.value.length === 0) {
@@ -369,7 +379,8 @@
                         const isFixedAmountItem = (item) => {
                             const p = String(item.product || '').trim();
                             const c = String(item.category || '').trim();
-                            return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                            const masterAmt = Number(item.amount) || 0;
+                            return masterAmt < 0 || p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
                                    c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
                         };
                         items.forEach(item => {
@@ -419,66 +430,25 @@
             });
             
             onMounted(async () => { 
-              // #region agent log
-              window._dbg('onMounted','onMounted start',{},'C');
-              // #endregion
               try {
                   const fallback = document.getElementById('loading-fallback');
                   if(fallback) fallback.style.display = 'none'; 
                   
-                  // 一括初期化: 1回のRPCで全起動データを取得（起動時間大幅短縮）
-                  let batchData = null;
-                  try {
-                      const batchRes = await gas('apiBatchInit');
-                      batchData = JSON.parse(batchRes);
-                  } catch(e) {
-                      // フォールバック: 個別取得
-                      window._dbg('onMounted','batchInit failed, fallback',{err:String(e?.message||e)},'C');
-                  }
-                  
-                  if (batchData) {
-                      // バッチ結果を展開
-                      const authData = JSON.parse(batchData.auth);
-                      if (authData) { auth.isAdmin = !!authData.isAdmin; userEmail.value = authData.email || ""; }
-                      const m = JSON.parse(batchData.masters);
-                      masters.clients = m.clients; masters.sets = m.sets; masters.vendors = m.vendors;
-                      projects.value = JSON.parse(batchData.projects);
-                      unifiedProducts.value = JSON.parse(batchData.products);
-                      orders.value = JSON.parse(batchData.orders);
-                      try { adminInvoices.value = JSON.parse(batchData.invoices); } catch(e) { adminInvoices.value = []; }
-                  } else {
-                      // フォールバック: 個別の並列取得
-                      const authRes = await gas('apiGetAuthStatus');
-                      if (authRes) {
-                          const authData = JSON.parse(authRes);
-                          if (authData) { auth.isAdmin = !!authData.isAdmin; userEmail.value = authData.email || ""; }
-                      }
-
-                  // パラレルデータ取得: 全初期データを一度に取得して読み込み時間を短縮
-                  const [mastersJson, projectsJson, productsJson, ordersJson, invoicesJson] = await Promise.all([
-                      gas('apiGetMasters'),
-                      gas('apiGetProjects'),
-                      gas('apiGetUnifiedProducts'),
-                      gas('apiGetOrders'),
-                      gas('apiGetInvoices')
+                  // 起動時は auth + masters のみ（遅延ロードで起動時間短縮）
+                  const [authRes, mastersJson] = await Promise.all([
+                      gas('apiGetAuthStatus'),
+                      gas('apiGetMasters')
                   ]);
-                  // #region agent log
-                  window._dbg('onMounted','Promise.all ok',{mLen:mastersJson?.length, pLen:projectsJson?.length},'C');
-                  // #endregion
+                  if (authRes) {
+                      const authData = JSON.parse(authRes);
+                      if (authData) { auth.isAdmin = !!authData.isAdmin; userEmail.value = authData.email || ""; }
+                  }
                   const m = JSON.parse(mastersJson); 
                   masters.clients = m.clients; masters.sets = m.sets; masters.vendors = m.vendors; 
                   
-                  projects.value = JSON.parse(projectsJson);
-                  unifiedProducts.value = JSON.parse(productsJson);
-                  orders.value = JSON.parse(ordersJson);
-                  try { adminInvoices.value = JSON.parse(invoicesJson); } catch(e) { adminInvoices.value = []; }
-                  }
-                  
                   currentTab.value = 'menu';
+                  // projects, orders, unifiedProducts, invoices は画面遷移時に遅延取得
               } catch(e) { 
-                  // #region agent log
-                  window._dbg('onMounted','catch',{err:String(e?.message||e)},'C');
-                  // #endregion
                   window.showCriticalError("Initialization Error:\n" + e.message); 
               } 
               finally { loading.value = false; } 
@@ -718,12 +688,12 @@
             
             const goToProjectList = async () => { 
                 checkUnsavedChanges(async () => {
-                    // キャッシュがあれば再取得不要 → 高速化
-                    if (projects.value.length === 0) {
-                        loadingMessage.value = '読み込み中...';
-                        await fetchProjects();
-                    }
-                    currentTab.value = 'list'; 
+                    loadingMessage.value = '読み込み中...';
+                    loading.value = true;
+                    try {
+                        await Promise.all([fetchProjects(true), fetchOrders(), fetchInvoices()]);
+                        currentTab.value = 'list'; 
+                    } finally { loading.value = false; }
                 });
             };
             const goToInvoice = async () => {
@@ -794,7 +764,15 @@
             });
 
             // 見積関連
-            const createNewEstimate = () => {
+            const createNewEstimate = async () => {
+                if (unifiedProducts.value.length === 0) {
+                    loadingMessage.value = '読込中';
+                    loading.value = true;
+                    try {
+                        const productsJson = await gas('apiGetUnifiedProducts');
+                        unifiedProducts.value = JSON.parse(productsJson);
+                    } finally { loading.value = false; }
+                }
                 form.header = { id: "", client: "", project: "", location: "", period: "", payment: "", expiry: "", status: "見積提出", visibility: "public" };
                 form.items = [{ category: "", product: "", spec: "", qty: 1, unit: "", price: 0, cost: 0, amount: 0, orderedQty: 0, orderedAmount: 0 }];
                 isReviewMode.value = false;
@@ -805,7 +783,10 @@
                 loadingMessage.value = '読込中...';
                 loading.value = true;
                 try {
-                    const res = await gas('apiGetEstimateDetails', id);
+                    const promises = [gas('apiGetEstimateDetails', id)];
+                    if (unifiedProducts.value.length === 0) promises.push(gas('apiGetUnifiedProducts'));
+                    const [res, productsJson] = await Promise.all(promises);
+                    if (productsJson) unifiedProducts.value = JSON.parse(productsJson);
                     const data = JSON.parse(res);
                     if (data) {
                         form.header = data.header;
@@ -917,9 +898,10 @@
             };
 
             const isFixedAmountRow = (item) => {
+                const amt = Number(item.amount) || 0;
                 const p = String(item.product || '').trim();
                 const c = String(item.category || '').trim();
-                return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                return amt < 0 || p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
                        c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
             };
             const calcLine = (item) => {

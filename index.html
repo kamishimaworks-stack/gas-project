@@ -2043,13 +2043,20 @@ window.__script2Ran = true;
                 }
             };
 
-            const openLeftPanel = (mode, rowIndex = null) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/cf251808-2a3e-4f12-be84-e0c33a422a0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:1726',message:'openLeftPanel called',data:{mode,rowIndex,unifiedProductsCount:unifiedProducts.value.length},timestamp:Date.now(),hypothesisId:'A,E'})}).catch(()=>{});
-                // #endregion
+            const openLeftPanel = async (mode, rowIndex = null) => {
                 leftPanelMode.value = mode;
                 if (rowIndex !== null) {
                     activeLeftPanelRow.value = rowIndex;
+                }
+                // 単価マスタ時: 未読込なら遅延取得
+                if (mode === 'price' && unifiedProducts.value.length === 0) {
+                    loadingMessage.value = '単価マスタ読込中';
+                    loading.value = true;
+                    try {
+                        const productsJson = await gas('apiGetUnifiedProducts');
+                        unifiedProducts.value = JSON.parse(productsJson);
+                    } catch(e) { console.error(e); }
+                    finally { loading.value = false; }
                 }
                 // セット検索時は初期データをロード
                 if (mode === 'set' && setMasters.value.length === 0) {
@@ -2110,7 +2117,8 @@ window.__script2Ran = true;
                         const isFixedAmountItem = (item) => {
                             const p = String(item.product || '').trim();
                             const c = String(item.category || '').trim();
-                            return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                            const masterAmt = Number(item.amount) || 0;
+                            return masterAmt < 0 || p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
                                    c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
                         };
                         items.forEach(item => {
@@ -2200,8 +2208,7 @@ window.__script2Ran = true;
                   masters.clients = m.clients; masters.sets = m.sets; masters.vendors = m.vendors; 
                   
                   currentTab.value = 'menu';
-                  await fetchOrders();
-                  // projects, unifiedProducts, fetchInvoices は画面遷移時に遅延取得
+                  // projects, orders, unifiedProducts, invoices は画面遷移時に遅延取得
               } catch(e) { 
                   // #region agent log
                   window._dbg('onMounted','catch',{err:String(e?.message||e)},'C');
@@ -2760,9 +2767,10 @@ window.__script2Ran = true;
             };
 
             const isFixedAmountRow = (item) => {
+                const amt = Number(item.amount) || 0;
                 const p = String(item.product || '').trim();
                 const c = String(item.category || '').trim();
-                return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                return amt < 0 || p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
                        c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
             };
             const calcLine = (item) => {

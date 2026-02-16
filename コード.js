@@ -371,8 +371,11 @@ function apiGetUnifiedProducts() {
   }
   const lSheet = ss.getSheetByName(CONFIG.sheetNames.list);
   if (lSheet && lSheet.getLastRow() > 1) {
-    const data = lSheet.getDataRange().getValues();
-    for (let i = data.length - 1; i >= 1; i--) {
+    const lastRow = lSheet.getLastRow();
+    const HISTORY_LIMIT = 500;  // 履歴データは直近500件に制限（起動時間短縮）
+    const startRow = Math.max(2, lastRow - HISTORY_LIMIT + 1);
+    const data = lSheet.getRange(startRow, 1, lastRow, 10).getValues();
+    for (let i = data.length - 1; i >= 0; i--) {
       const r = data[i];
       if (r[4] && r[9]) {
         add({ category: r[3], product: r[4], spec: r[5], unit: r[7], price: parseCurrency(r[9]) }, "履歴");
@@ -424,12 +427,13 @@ function apiGetSetDetails(setName) {
   if (!sheet) return JSON.stringify([]);
   const data = sheet.getDataRange().getValues().slice(1);
   const items = data.filter(r => r[0] === setName).map(r => {
-      const rawPrice = Number(r[6]) || 0;
-      const rawAmount = Number(r[7]) || 0;
+      const rawPrice = parseCurrency(r[6]);
+      const rawAmount = parseCurrency(r[7]);
       const qty = Number(r[4]) || 0;
-      // 単価が空欄で金額だけ記載されている場合、金額÷数量を単価とする
-      const price = rawPrice > 0 ? rawPrice : (qty > 0 && rawAmount > 0 ? Math.round(rawAmount / qty) : 0);
-      const amount = rawAmount > 0 ? rawAmount : Math.round(qty * price);
+      // 単価が空欄で金額だけ記載されている場合、金額÷数量を単価とする（金額が正のときのみ）
+      const price = rawPrice !== 0 ? rawPrice : (qty > 0 && rawAmount > 0 ? Math.round(rawAmount / qty) : 0);
+      // 金額が記載されていればそのまま使用（負数含む：値引き等）、なければ単価×数量
+      const amount = rawAmount !== 0 ? rawAmount : Math.round(qty * price);
       return {
         category: r[1], product: r[2], spec: r[3], qty: qty, unit: r[5], price: price, amount: amount, remarks: r[8] || ""
       };
@@ -2094,18 +2098,12 @@ function apiSearchItems(keyword, type) {
 }
 
 /**
- * 一括初期化API: フロントエンドの起動時に1回のRPCで全データを取得
- * GAS RPCのラウンドトリップ回数を5→1に削減し、起動時間を大幅に短縮
+ * 一括初期化API（軽量版）: 起動時は認証とマスタのみ取得
+ * projects, orders, products, invoices は画面遷移時に遅延取得で起動時間を短縮
  */
 function apiBatchInit() {
   const results = {};
   results.auth = apiGetAuthStatus();
   results.masters = apiGetMasters();
-  results.projects = apiGetProjects();
-  results.products = apiGetUnifiedProducts();
-  results.orders = apiGetOrders();
-  try { results.invoices = apiGetInvoices(); } catch(e) { results.invoices = '[]'; }
-  try { results.deposits = apiGetDeposits(); } catch(e) { results.deposits = '[]'; }
-  try { results.payments = apiGetPayments(); } catch(e) { results.payments = '[]'; }
   return JSON.stringify(results);
 }
