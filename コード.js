@@ -477,7 +477,8 @@ function apiGetProjects() {
   const sheets = {
     list: ss.getSheetByName(CONFIG.sheetNames.list),
     order: ss.getSheetByName(CONFIG.sheetNames.order),
-    invoice: ss.getSheetByName(CONFIG.sheetNames.invoice)
+    invoice: ss.getSheetByName(CONFIG.sheetNames.invoice),
+    deposits: ss.getSheetByName(CONFIG.sheetNames.deposits)
   };
   if (!sheets.list) { ss.insertSheet(CONFIG.sheetNames.list); return JSON.stringify([]); }
   if (sheets.list.getLastRow() < 2) return JSON.stringify([]);
@@ -517,6 +518,24 @@ function apiGetProjects() {
     }
   }
 
+  // 入金データ集計 (見積ID単位)
+  const depositSummary = {};
+  if (sheets.deposits && sheets.deposits.getLastRow() > 1) {
+    const dData = sheets.deposits.getDataRange().getDisplayValues();
+    for (let i = 1; i < dData.length; i++) {
+      const row = dData[i];
+      if (!row[0]) continue;
+      const estId = String(row[3]).trim(); // 関連見積ID
+      if (!estId) continue;
+      const status = String(row[11]).trim();
+      if (status === '取消') continue;
+      const amount = parseCurrency(row[7]);
+      if (!depositSummary[estId]) depositSummary[estId] = { totalDeposit: 0, depositCount: 0 };
+      depositSummary[estId].totalDeposit += amount;
+      depositSummary[estId].depositCount += 1;
+    }
+  }
+
   const data = sheets.list.getDataRange().getValues().slice(1);
   const projectMap = {};
   let currentId = "";
@@ -526,11 +545,13 @@ function apiGetProjects() {
       if (!projectMap[currentId]) { 
         const summary = orderSummary[currentId] || { totalCost: 0, orderCount: 0 };
         const invSummary = invoiceSummary[currentId] || { totalInvoiced: 0, invoiceCount: 0 };
+        const depSummary = depositSummary[currentId] || { totalDeposit: 0, depositCount: 0 };
         projectMap[currentId] = { 
           id: currentId, date: formatDate(row[1]), client: row[2], project: row[13], location: row[12], 
           status: row[17] || "未作成", visibility: row[19] || 'public', 
           totalAmount: 0, totalOrderAmount: summary.totalCost, orderCount: summary.orderCount,
-          totalInvoicedAmount: invSummary.totalInvoiced, invoiceCount: invSummary.invoiceCount
+          totalInvoicedAmount: invSummary.totalInvoiced, invoiceCount: invSummary.invoiceCount,
+          totalDeposit: depSummary.totalDeposit, depositCount: depSummary.depositCount
         }; 
       }
       projectMap[currentId].totalAmount += Number(row[10]) || 0;
@@ -906,8 +927,38 @@ function apiGetOrders() {
 
   const IDX = {
     id: col["ID"] !== undefined ? col["ID"] : 0, date: col["日付"] !== undefined ? col["日付"] : 1, vendor: col["発注先"] !== undefined ? col["発注先"] : 2, relEstId: col["関連見積ID"] !== undefined ? col["関連見積ID"] : 3,
-    amount: col["金額"] !== undefined ? col["金額"] : 10, location: col["納品場所"] !== undefined ? col["納品場所"] : 11, status: col["状態"] !== undefined ? col["状態"] : 12, remarks: col["備考"] !== undefined ? col["備考"] : 13, visibility: col["公開範囲"] !== undefined ? col["公開範囲"] : 15
+    product: col["品名"] !== undefined ? col["品名"] : 5,
+    amount: col["金額"] !== undefined ? col["金額"] : 10, location: col["納品場所"] !== undefined ? col["納品場所"] : 11, status: col["状態"] !== undefined ? col["状態"] : 12, remarks: col["備考"] !== undefined ? col["備考"] : 13, creator: col["作成者"] !== undefined ? col["作成者"] : 14, visibility: col["公開範囲"] !== undefined ? col["公開範囲"] : 15
   };
+
+  // 出金データ集計 (発注ID単位)
+  const paymentSummary = {};
+  const paySheet = ss.getSheetByName(CONFIG.sheetNames.payments);
+  if (paySheet && paySheet.getLastRow() > 1) {
+    const pData = paySheet.getDataRange().getDisplayValues();
+    for (let i = 1; i < pData.length; i++) {
+      const row = pData[i];
+      if (!row[0]) continue;
+      const orderId = String(row[3]).trim(); // 関連発注ID
+      if (!orderId) continue;
+      const status = String(row[12]).trim();
+      if (status === '取消') continue;
+      const amount = parseCurrency(row[8]);
+      if (!paymentSummary[orderId]) paymentSummary[orderId] = { totalPaid: 0, paymentCount: 0 };
+      paymentSummary[orderId].totalPaid += amount;
+      paymentSummary[orderId].paymentCount += 1;
+    }
+  }
+
+  // PDF存在チェック用: ドライブフォルダ内のPDFファイル名を収集
+  let pdfFileNames = [];
+  try {
+    const folder = getSaveFolder();
+    const pdfFiles = folder.getFilesByType(MimeType.PDF);
+    while (pdfFiles.hasNext()) {
+      pdfFileNames.push(pdfFiles.next().getName());
+    }
+  } catch(e) { /* ignore */ }
 
   const orderMap = new Map();
   let currentId = ""; 
@@ -917,20 +968,50 @@ function apiGetOrders() {
     if (!currentId) continue;
 
     if (!orderMap.has(currentId)) {
+      const paySummary = paymentSummary[currentId] || { totalPaid: 0, paymentCount: 0 };
       orderMap.set(currentId, {
         id: currentId, date: row[IDX.date], vendor: row[IDX.vendor], relEstId: row[IDX.relEstId], location: row[IDX.location],
-        status: row[IDX.status], remarks: row[IDX.remarks], visibility: row[IDX.visibility] || 'public', totalAmount: 0
+        status: row[IDX.status], remarks: row[IDX.remarks], creator: row[IDX.creator] || '', visibility: row[IDX.visibility] || 'public', totalAmount: 0,
+        totalPaid: paySummary.totalPaid, paymentCount: paySummary.paymentCount,
+        hasPdf: false, project: ''
       });
     }
     const amount = parseCurrency(row[IDX.amount]);
     const currentData = orderMap.get(currentId);
     if (currentData) { currentData.totalAmount += amount; }
   }
+
+  // PDF存在チェック & プロジェクト名取得
   const list = Array.from(orderMap.values());
+  list.forEach(order => {
+    // PDF存在チェック: 発注書_業者名_ でファイル名マッチ
+    const cleanVendor = (order.vendor || '').replace(/[\r\n\t\\/:*?"<>|]/g, '').trim();
+    order.hasPdf = pdfFileNames.some(fn => fn.includes('発注書_' + cleanVendor));
+    // 関連見積IDからプロジェクト名を推定 (見積リストの工事名)
+    if (order.relEstId) {
+      const est = _getEstimateHeaderOnly(order.relEstId);
+      if (est) order.project = est.project || '';
+    }
+  });
+
   list.sort((a, b) => new Date(b.date) - new Date(a.date));
   const result = JSON.stringify(list);
   try { cache.put("orders_data", result, CACHE_TTL_ORDERS); } catch (e) { console.warn("Cache put failed (orders_data): " + e.message); }
   return result;
+}
+
+// 軽量ヘッダー取得 (apiGetOrdersから利用、明細不要)
+function _getEstimateHeaderOnly(id) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.sheetNames.list);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === id) {
+      return { project: data[i][13], client: data[i][2], location: data[i][12] };
+    }
+  }
+  return null;
 }
 
 function apiCreateOrderPdf(jsonData, targetVendor) {
@@ -1880,14 +1961,78 @@ function apiGetProjectLedger(projectId) {
       }
     }
   }
+
+  // 入金データ取得
+  const depSheet = ss.getSheetByName(CONFIG.sheetNames.deposits);
+  const depositEntries = [];
+  let totalDepositAmount = 0;
+  if (depSheet && depSheet.getLastRow() > 1) {
+    const dData = depSheet.getDataRange().getDisplayValues();
+    for (let i = 1; i < dData.length; i++) {
+      const r = dData[i];
+      if (!r[0]) continue;
+      const estId = String(r[3]).trim();
+      if (estId === projectId || estId.startsWith(projectId + '-')) {
+        const status = String(r[11]).trim();
+        if (status === '取消') continue;
+        const amount = parseCurrency(r[7]);
+        const fee = parseCurrency(r[8]);
+        depositEntries.push({ date: r[2], client: r[4], type: r[6], amount: amount, fee: fee, remarks: r[10] || '' });
+        totalDepositAmount += amount;
+      }
+    }
+  }
+
+  // 出金データ取得
+  const paySheet = ss.getSheetByName(CONFIG.sheetNames.payments);
+  const paymentEntries = [];
+  let totalPaymentAmount = 0;
+  if (paySheet && paySheet.getLastRow() > 1) {
+    const pData = paySheet.getDataRange().getDisplayValues();
+    for (let i = 1; i < pData.length; i++) {
+      const r = pData[i];
+      if (!r[0]) continue;
+      // 出金は発注IDで紐付けるため、発注IDから関連見積IDを逆引き
+      const orderId = String(r[3]).trim();
+      const status = String(r[12]).trim();
+      if (status === '取消') continue;
+      const amount = parseCurrency(r[8]);
+      const fee = parseCurrency(r[9]);
+      // 工事名でも照合
+      const payProject = String(r[6]).trim();
+      const payEstHeader = estimate.header || {};
+      const matchByOrder = orderId && orders.some(o => true); // 発注IDがある場合は発注明細と照合
+      const matchByProject = payProject && (payProject === (payEstHeader.project || '') || payProject === (payEstHeader.client || ''));
+      
+      // 関連発注IDで照合: 発注IDから関連見積IDを取得
+      let matchByOrderEstId = false;
+      if (orderId && ordSheet) {
+        const oData2 = ordSheet.getDataRange().getDisplayValues();
+        for (let j = 1; j < oData2.length; j++) {
+          if (oData2[j][0] === orderId && (oData2[j][3] === projectId || String(oData2[j][3]).startsWith(projectId + '-'))) {
+            matchByOrderEstId = true;
+            break;
+          }
+        }
+      }
+      
+      if (matchByOrderEstId || matchByProject) {
+        paymentEntries.push({ date: r[2], supplier: r[5], type: r[7], amount: amount, fee: fee, remarks: r[11] || '' });
+        totalPaymentAmount += amount;
+      }
+    }
+  }
+
   const totalSales = estimate.totalAmount || 0;
   const totalOrder = orders.reduce((s,o) => s + o.amount, 0);
-  const totalPayment = invoices.reduce((s,i) => s + i.amount, 0);
+  const totalInvoicePayment = invoices.reduce((s,i) => s + i.amount, 0);
   const profit = totalSales - totalOrder; 
   const profitRate = totalSales ? ((profit / totalSales) * 100).toFixed(1) : 0;
   return JSON.stringify({
-    project: estimate.header, sales: totalSales, totalOrder: totalOrder, totalPayment: totalPayment,
-    profit: profit, profitRate: profitRate, orders: orders, invoices: invoices
+    project: estimate.header, sales: totalSales, totalOrder: totalOrder, totalPayment: totalInvoicePayment,
+    profit: profit, profitRate: profitRate, orders: orders, invoices: invoices,
+    deposits: depositEntries, totalDeposit: totalDepositAmount,
+    payments: paymentEntries, totalWithdrawal: totalPaymentAmount
   });
 }
 
@@ -1939,5 +2084,7 @@ function apiBatchInit() {
   results.products = apiGetUnifiedProducts();
   results.orders = apiGetOrders();
   try { results.invoices = apiGetInvoices(); } catch(e) { results.invoices = '[]'; }
+  try { results.deposits = apiGetDeposits(); } catch(e) { results.deposits = '[]'; }
+  try { results.payments = apiGetPayments(); } catch(e) { results.payments = '[]'; }
   return JSON.stringify(results);
 }
