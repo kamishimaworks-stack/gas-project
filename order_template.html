@@ -13,11 +13,11 @@
   <title>注文書</title>
   <style>
     @page { size: A4 portrait; margin: 0; }
-    body { font-family: 'MS PMincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif; padding: 40px; color: #333; font-size: 10.5pt; }
-    .page-header { text-align: center; margin-bottom: 30px; }
+    body { font-family: 'MS PMincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif; padding: 25px 30px; color: #333; font-size: 10pt; }
+    .page-header { text-align: center; margin-bottom: 15px; }
     .main-title { font-size: 24pt; font-weight: 700; border-bottom: 3px double #333; padding: 0 10px; }
     
-    .flex-container { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .flex-container { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     .flex-container td { vertical-align: top; }
     
     .customer-name { font-size: 16pt; font-weight: 700; border-bottom: 1px solid #333; min-width: 250px; display: inline-block; margin-bottom: 15px; }
@@ -39,7 +39,7 @@
     .logo-img { max-height: 50px; vertical-align: middle; margin-right: 10px; }
     
     .details-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-    .details-table th, .details-table td { border: 1px solid #333; padding: 5px; }
+    .details-table th, .details-table td { border: 1px solid #333; padding: 3px 5px; }
     .header-cell { background-color: #e5e7eb; font-weight: bold; text-align: center; }
     .row-summary { background-color: #f9fafb; font-weight: bold; }
     .border-none { border: none !important; background: none !important; }
@@ -94,11 +94,6 @@
       </td>
     </tr>
   </table>
-  <? } else { ?>
-  <div style="border-bottom: 1px solid #333; margin-bottom: 10px; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:flex-end;">
-      <div><span style="font-weight: bold;">注文書 - <?= data.header.vendor ?> 御中 (続き)</span></div>
-      <div style="font-size: 9pt; text-align: right;">No: <?= data.header.id ?></div>
-  </div>
   <? } ?>
 
   <table class="details-table">

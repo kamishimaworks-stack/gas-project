@@ -197,20 +197,25 @@ function deleteRowsById(sheet, targetId) {
   return true;
 }
 
-function paginateItems(items, rowsPerPage) {
+function paginateItems(items, rowsPerPage, rowsPerPageSubsequent) {
+  const firstPageRows = rowsPerPage;
+  const nextPageRows = rowsPerPageSubsequent || rowsPerPage;
   const pages = [];
   const targetItems = (items && Array.isArray(items) && items.length > 0) ? items : [];
   const queue = targetItems.map(item => ({ ...item }));
+  let isFirst = true;
   while (queue.length > 0) {
-    const chunk = queue.splice(0, rowsPerPage);
-    while (chunk.length < rowsPerPage) {
+    const limit = isFirst ? firstPageRows : nextPageRows;
+    const chunk = queue.splice(0, limit);
+    while (chunk.length < limit) {
       chunk.push({ isPadding: true });
     }
     pages.push(chunk);
+    isFirst = false;
   }
   if (pages.length === 0) {
       const chunk = [];
-      for(let i=0; i<rowsPerPage; i++) chunk.push({ isPadding: true });
+      for(let i=0; i<firstPageRows; i++) chunk.push({ isPadding: true });
       pages.push(chunk);
   }
   return pages;
@@ -468,15 +473,18 @@ function apiGetProjects() {
   if (cached) return cached;
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(CONFIG.sheetNames.list);
-  let orderSheet = ss.getSheetByName(CONFIG.sheetNames.order);
-  let invoiceSheet = ss.getSheetByName(CONFIG.sheetNames.invoice);
-  if (!sheet) { sheet = ss.insertSheet(CONFIG.sheetNames.list); return JSON.stringify([]); }
-  if (sheet.getLastRow() < 2) return JSON.stringify([]);
+  // パフォーマンス最適化: 全シート一括取得
+  const sheets = {
+    list: ss.getSheetByName(CONFIG.sheetNames.list),
+    order: ss.getSheetByName(CONFIG.sheetNames.order),
+    invoice: ss.getSheetByName(CONFIG.sheetNames.invoice)
+  };
+  if (!sheets.list) { ss.insertSheet(CONFIG.sheetNames.list); return JSON.stringify([]); }
+  if (sheets.list.getLastRow() < 2) return JSON.stringify([]);
 
   const orderSummary = {}; 
-  if (orderSheet && orderSheet.getLastRow() > 1) {
-    const oData = orderSheet.getDataRange().getDisplayValues();
+  if (sheets.order && sheets.order.getLastRow() > 1) {
+    const oData = sheets.order.getDataRange().getDisplayValues();
     if (oData.length > 1) {
       let hIdx = 0;
       for(let i=0; i<Math.min(10, oData.length); i++) { if(oData[i][0] === 'ID') { hIdx = i; break; } }
@@ -497,8 +505,8 @@ function apiGetProjects() {
   }
 
   const invoiceSummary = {};
-  if (invoiceSheet && invoiceSheet.getLastRow() > 1) {
-    const iData = invoiceSheet.getDataRange().getDisplayValues();
+  if (sheets.invoice && sheets.invoice.getLastRow() > 1) {
+    const iData = sheets.invoice.getDataRange().getDisplayValues();
     for (let i = 1; i < iData.length; i++) {
       const row = iData[i]; const constId = row[4]; const payAmount = parseCurrency(row[10]); 
       if (constId) {
@@ -509,7 +517,7 @@ function apiGetProjects() {
     }
   }
 
-  const data = sheet.getDataRange().getValues().slice(1);
+  const data = sheets.list.getDataRange().getValues().slice(1);
   const projectMap = {};
   let currentId = "";
   data.forEach(row => {
@@ -819,7 +827,7 @@ function apiSaveAndCreateEstimatePdf(jsonData) {
     const now = new Date();
     data.totalAmount = data.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     data.header.date = getJapaneseDateStr(now);
-    data.pages = paginateItems(data.items, 12);
+    data.pages = paginateItems(data.items, 20, 35);
 
     let template;
     try { template = HtmlService.createTemplateFromFile('quote_template'); } 
@@ -859,7 +867,7 @@ function apiIssueBillFromId(id) {
   const now = new Date();
   estimateData.totalAmount = estimateData.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   estimateData.header.date = getJapaneseDateStr(now);
-  estimateData.pages = paginateItems(estimateData.items, 12);
+  estimateData.pages = paginateItems(estimateData.items, 20, 35);
   
   let template;
   try { template = HtmlService.createTemplateFromFile('bill_template'); } 
@@ -951,7 +959,7 @@ function apiCreateOrderPdf(jsonData, targetVendor) {
   data.header.honorific = " 御中"; 
   data.header.date = getJapaneseDateStr(now);
   data.totalAmount = data.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  data.pages = paginateItems(data.items, 12);
+  data.pages = paginateItems(data.items, 22, 35);
 
   // 関連見積IDがある場合、見積データから工事名・工期・決済条件・有効期限を取得
   if (data.header.relEstId) {
@@ -1130,7 +1138,7 @@ function apiReprintOrderPdf(orderId) {
   
   const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   // PDF生成（totalAmountを追加してテンプレートで合計表示）
-  const pdfData = { header: header, items: items, totalAmount: totalAmount, pages: paginateItems(items, 12) };
+  const pdfData = { header: header, items: items, totalAmount: totalAmount, pages: paginateItems(items, 22, 35) };
   
   try {
     let template;
@@ -1917,4 +1925,19 @@ function apiDeleteData(id) {
 /** @deprecated フロントエンドから未使用。将来の検索パネル用に残置 */
 function apiSearchItems(keyword, type) {
   return JSON.stringify([]);
+}
+
+/**
+ * 一括初期化API: フロントエンドの起動時に1回のRPCで全データを取得
+ * GAS RPCのラウンドトリップ回数を5→1に削減し、起動時間を大幅に短縮
+ */
+function apiBatchInit() {
+  const results = {};
+  results.auth = apiGetAuthStatus();
+  results.masters = apiGetMasters();
+  results.projects = apiGetProjects();
+  results.products = apiGetUnifiedProducts();
+  results.orders = apiGetOrders();
+  try { results.invoices = apiGetInvoices(); } catch(e) { results.invoices = '[]'; }
+  return JSON.stringify(results);
 }

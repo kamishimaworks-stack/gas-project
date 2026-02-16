@@ -26,6 +26,7 @@
             else if(funcName === 'apiGetUnifiedProducts') resolve('[]'); // Mock
             else if(funcName === 'apiSearchSets') resolve('[]'); // Mock
             else if(funcName === 'apiGetInvoices') resolve('[]'); // Mock (fetchInvoices on mount)
+            else if(funcName === 'apiBatchInit') resolve(JSON.stringify({auth:JSON.stringify({isAdmin:true,email:'test@example.com'}),masters:JSON.stringify({clients:['テスト建設'],sets:[],vendors:[]}),projects:'[]',products:'[]',orders:'[]',invoices:'[]'})); // Mock
             else reject('GAS Environment not found');
             return;
         }
@@ -418,23 +419,41 @@
                   const fallback = document.getElementById('loading-fallback');
                   if(fallback) fallback.style.display = 'none'; 
                   
-                  // 管理者権限情報の取得
-                  const authRes = await gas('apiGetAuthStatus');
-                  // #region agent log
-                  window._dbg('onMounted','apiGetAuthStatus ok',{len:authRes?authRes.length:0},'C');
-                  // #endregion
-                  if (authRes) {
-                    const authData = JSON.parse(authRes);
-                    if (authData) { 
-                        auth.isAdmin = !!authData.isAdmin; 
-                        userEmail.value = authData.email || ""; 
-                    }
+                  // 一括初期化: 1回のRPCで全起動データを取得（起動時間大幅短縮）
+                  let batchData = null;
+                  try {
+                      const batchRes = await gas('apiBatchInit');
+                      batchData = JSON.parse(batchRes);
+                  } catch(e) {
+                      // フォールバック: 個別取得
+                      window._dbg('onMounted','batchInit failed, fallback',{err:String(e?.message||e)},'C');
                   }
+                  
+                  if (batchData) {
+                      // バッチ結果を展開
+                      const authData = JSON.parse(batchData.auth);
+                      if (authData) { auth.isAdmin = !!authData.isAdmin; userEmail.value = authData.email || ""; }
+                      const m = JSON.parse(batchData.masters);
+                      masters.clients = m.clients; masters.sets = m.sets; masters.vendors = m.vendors;
+                      projects.value = JSON.parse(batchData.projects);
+                      unifiedProducts.value = JSON.parse(batchData.products);
+                      orders.value = JSON.parse(batchData.orders);
+                      try { adminInvoices.value = JSON.parse(batchData.invoices); } catch(e) { adminInvoices.value = []; }
+                  } else {
+                      // フォールバック: 個別の並列取得
+                      const authRes = await gas('apiGetAuthStatus');
+                      if (authRes) {
+                          const authData = JSON.parse(authRes);
+                          if (authData) { auth.isAdmin = !!authData.isAdmin; userEmail.value = authData.email || ""; }
+                      }
 
-                  const [mastersJson, projectsJson, productsJson] = await Promise.all([
+                  // パラレルデータ取得: 全初期データを一度に取得して読み込み時間を短縮
+                  const [mastersJson, projectsJson, productsJson, ordersJson, invoicesJson] = await Promise.all([
                       gas('apiGetMasters'),
                       gas('apiGetProjects'),
-                      gas('apiGetUnifiedProducts') // Phase 2: 統合単価マスタ取得
+                      gas('apiGetUnifiedProducts'),
+                      gas('apiGetOrders'),
+                      gas('apiGetInvoices')
                   ]);
                   // #region agent log
                   window._dbg('onMounted','Promise.all ok',{mLen:mastersJson?.length, pLen:projectsJson?.length},'C');
@@ -444,9 +463,11 @@
                   
                   projects.value = JSON.parse(projectsJson);
                   unifiedProducts.value = JSON.parse(productsJson);
+                  orders.value = JSON.parse(ordersJson);
+                  try { adminInvoices.value = JSON.parse(invoicesJson); } catch(e) { adminInvoices.value = []; }
+                  }
                   
                   currentTab.value = 'menu';
-                  fetchInvoices();
               } catch(e) { 
                   // #region agent log
                   window._dbg('onMounted','catch',{err:String(e?.message||e)},'C');
@@ -690,8 +711,11 @@
             
             const goToProjectList = async () => { 
                 checkUnsavedChanges(async () => {
-                    loadingMessage.value = '読み込み中...';
-                    await fetchProjects();
+                    // キャッシュがあれば再取得不要 → 高速化
+                    if (projects.value.length === 0) {
+                        loadingMessage.value = '読み込み中...';
+                        await fetchProjects();
+                    }
                     currentTab.value = 'list'; 
                 });
             };
@@ -700,10 +724,13 @@
                     loadingMessage.value = '読み込み中...';
                     loading.value = true; 
                     try { 
-                        const pList = await gas('apiGetActiveProjectsList');
+                        // パラレル取得で請求書画面の読み込み高速化
+                        const [pList] = await Promise.all([
+                            gas('apiGetActiveProjectsList'),
+                            loadInvoiceFiles(),
+                            fetchInvoices()
+                        ]);
                         activeProjects.value = JSON.parse(pList);
-                        await loadInvoiceFiles();
-                        await fetchInvoices();
                         resetInvoiceForm();
                         currentTab.value = 'invoice';
                     } finally { loading.value = false; }
@@ -715,10 +742,13 @@
                         loadingMessage.value = '読み込み中...';
                         loading.value=true; 
                         try{ 
-                            await fetchProjects(true); 
-                            await fetchOrders(); 
-                            await fetchInvoices(); 
-                            const yList = await gas('apiGetJournalYears'); 
+                            // パラレル取得で管理画面の読み込み高速化
+                            const [, , , yList] = await Promise.all([
+                                fetchProjects(true),
+                                fetchOrders(),
+                                fetchInvoices(),
+                                gas('apiGetJournalYears')
+                            ]);
                             journalYears.value = JSON.parse(yList); 
                             if(journalYears.value.length > 0) journalYear.value = journalYears.value[0]; 
                             await nextTick(); 
