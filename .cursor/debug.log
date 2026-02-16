@@ -171,3 +171,28 @@
 {"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771210660626}
 {"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771210660628}
 {"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771210662026}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771210827142}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771210827195}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771210827198}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771210828532}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771210896630,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771210900354,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771210900354,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771210975550,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771210991075,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":51,"unifiedProductsCount":1780},"timestamp":1771211007959,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1780},"timestamp":1771211007964,"hypothesisId":"C,D"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":51,"unifiedProductsCount":1780},"timestamp":1771211029784,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":52,"unifiedProductsCount":1780},"timestamp":1771211029802,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":52,"unifiedProductsCount":1780},"timestamp":1771211035120,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":53,"unifiedProductsCount":1780},"timestamp":1771211035137,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":53,"unifiedProductsCount":1780},"timestamp":1771211139472,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":53,"unifiedProductsCount":1780},"timestamp":1771211141069,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771211228790}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771211228850}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771211228852}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771211231340}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771211266170,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771211269385,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771211269386,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1780},"timestamp":1771211272712,"hypothesisId":"A,E"}

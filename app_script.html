@@ -366,7 +366,14 @@
                     const res = await gas('apiGetSetDetails', setName);
                     const items = JSON.parse(res);
                     if (items && items.length > 0) {
+                        const isFixedAmountItem = (item) => {
+                            const p = String(item.product || '').trim();
+                            const c = String(item.category || '').trim();
+                            return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                                   c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
+                        };
                         items.forEach(item => {
+                            const useMasterAmount = isFixedAmountItem(item);
                             form.items.push({
                                 category: item.category,
                                 product: item.product,
@@ -375,7 +382,7 @@
                                 unit: item.unit,
                                 price: item.price,
                                 cost: 0, 
-                                amount: Math.round(item.qty * item.price),
+                                amount: useMasterAmount ? (Number(item.amount) || 0) : Math.round(item.qty * item.price),
                                 orderedQty: 0, orderedAmount: 0
                             });
                         });
@@ -909,8 +916,16 @@
                 }
             };
 
+            const isFixedAmountRow = (item) => {
+                const p = String(item.product || '').trim();
+                const c = String(item.category || '').trim();
+                return p.includes('重機回送費') || p.includes('諸経費') || p.includes('値引') ||
+                       c.includes('重機回送費') || c.includes('諸経費') || c.includes('値引');
+            };
             const calcLine = (item) => {
-                item.amount = Math.round((Number(item.qty)||0) * (Number(item.price)||0));
+                if (!isFixedAmountRow(item)) {
+                    item.amount = Math.round((Number(item.qty)||0) * (Number(item.price)||0));
+                }
                 item.orderedAmount = Math.round((Number(item.qty)||0) * (Number(item.cost)||0));
             };
             const totalAmount = computed(() => form.items.reduce((s, i) => s + (Number(i.amount) || 0), 0));
