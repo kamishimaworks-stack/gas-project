@@ -681,6 +681,8 @@
           <div v-if="listSubTab==='order'">
             <div class="bg-white p-4 border border-gray-400 rounded shadow-sm">
               <div class="flex flex-wrap gap-4 items-end mb-4">
+                <div><label class="text-[10px] block font-bold">表示年</label><select v-model="orderListFilter.year" class="border p-1 text-xs w-24 bg-gray-50"><option value="">全て</option><option v-for="y in orderListYears" :key="y" :value="y">{{ y }}年</option></select></div>
+                <div><label class="text-[10px] block font-bold">表示月</label><select v-model="orderListFilter.month" class="border p-1 text-xs w-24 bg-gray-50"><option value="">全て</option><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select></div>
                 <div><label class="text-[10px] block font-bold">発注先で絞り込み</label>
                   <select v-model="orderListFilter.vendor" class="border p-1 text-xs w-48 bg-gray-50">
                     <option value="">全ての発注先</option>
@@ -1824,7 +1826,7 @@ window.__script2Ran = true;
             const form = reactive({ header: { id: "", date: "", client: "", project: "", location: "", period: "", payment: "", expiry: "", status: "見積提出", visibility: "public", defaultVendor: "" }, items: [] });
             const filter = reactive({ year: "", month: "", client: "" });
             const listSubTab = ref('estimate'); // 'estimate' | 'order'
-            const orderListFilter = reactive({ vendor: '' });
+            const orderListFilter = reactive({ vendor: '', year: '', month: '' });
             
             const showOcrModal = ref(false); const ocrFiles = ref([]); const isOcrLoading = ref(false); const selectedOcrFiles = ref([]);
             const showDraftModal = ref(false); const drafts = ref([]); const isDraftLoading = ref(false);
@@ -1900,9 +1902,17 @@ window.__script2Ran = true;
                 const vendors = [...new Set(orders.value.map(o => o.vendor).filter(Boolean))];
                 return vendors.sort();
             });
+            const orderListYears = computed(() => {
+                const ys = new Set(orders.value.map(o => {
+                    try { return new Date(o.date).getFullYear(); } catch(e) { return null; }
+                }).filter(y => y && !isNaN(y)));
+                return Array.from(ys).sort((a, b) => b - a);
+            });
             const filteredOrderList = computed(() => {
                 let list = orders.value.filter(o => o.visibility !== 'admin');
                 if (orderListFilter.vendor) list = list.filter(o => o.vendor === orderListFilter.vendor);
+                if (orderListFilter.year) list = list.filter(o => new Date(o.date).getFullYear() == orderListFilter.year);
+                if (orderListFilter.month) list = list.filter(o => new Date(o.date).getMonth() + 1 == orderListFilter.month);
                 return list;
             });
 
@@ -2895,7 +2905,7 @@ window.__script2Ran = true;
                 deposits, payments, depositForm, paymentForm, showDepositModal, showPaymentModal, fetchDeposits, fetchPayments, openDepositModal, openPaymentModal, saveDeposit, savePayment,
                 activeSuggestionIdx, filteredSuggestions, showSidePanel, clientHistory,
                 showLedgerModal, ledgerData, adminSubTab, analysisYear, analysisData, analysisTotalSales, analysisTotalProfit,
-                notifications, confirmState, form, filter, listSubTab, orderListFilter, orderListVendors, filteredOrderList,
+                notifications, confirmState, form, filter, listSubTab, orderListFilter, orderListVendors, orderListYears, filteredOrderList,
                 showOcrModal, ocrFiles, isOcrLoading, selectedOcrFiles, showDraftModal, drafts, isDraftLoading, estimateCandidates,
                 showVendorSelectModal, vendorCandidates,
                 sidePanelMode, historyList, orderInPanel, toggleSidePanel, closeSidePanel, handleEstimateRowClick, saveOrderFromPanel, createOrderPdfFromPanel, orderPanelTab, editingOrderInPanel, currentEstimateOrders, reprintOrderPdf, openOrderForEdit, closeOrderEdit, calcEditedOrderLine, addEditOrderItem, removeEditOrderItem, saveEditedOrderFromPanel,
