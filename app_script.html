@@ -115,7 +115,7 @@
 
             // Phase 4: 専用発注画面データ
             const dedicatedOrderForm = reactive({
-                header: { id: "", vendor: "", date: getJapaneseDateStr(), relEstId: "", location: "", status: "発注書作成", visibility: "public" },
+                header: { id: "", vendor: "", date: getJapaneseDateStr(), relEstId: "", location: "", project: "", period: "", payment: "", expiry: "", status: "発注書作成", visibility: "public" },
                 items: [{ product: "", spec: "", qty: 1, unit: "", cost: 0, amount: 0 }]
             });
 
@@ -262,7 +262,7 @@
 
             // Phase 4: 専用発注画面ロジック
             const createNewDedicatedOrder = () => {
-                dedicatedOrderForm.header = { id: "", vendor: "", date: getJapaneseDateStr(), relEstId: "", location: "", status: "発注書作成", visibility: "public" };
+                dedicatedOrderForm.header = { id: "", vendor: "", date: getJapaneseDateStr(), relEstId: "", location: "", project: "", period: "", payment: "", expiry: "", status: "発注書作成", visibility: "public" };
                 dedicatedOrderForm.items = [{ product: "", spec: "", qty: 1, unit: "", cost: 0, amount: 0 }];
                 isDirty.value = false;
             };
@@ -298,7 +298,12 @@
                 if(!dedicatedOrderForm.header.vendor) return notify("発注先を入力してください", "error");
                 loading.value = true;
                 try {
-                    const res = await gas('apiCreateOrderPdf', JSON.stringify(dedicatedOrderForm), dedicatedOrderForm.header.vendor);
+                    const vendor = dedicatedOrderForm.header.vendor;
+                    const payload = {
+                        header: { ...dedicatedOrderForm.header },
+                        items: dedicatedOrderForm.items.map(i => ({ ...i, vendor }))
+                    };
+                    const res = await gas('apiCreateOrderPdf', JSON.stringify(payload), vendor);
                     const r = JSON.parse(res);
                     if (r.success) {
                         window.open(r.url);

@@ -8,7 +8,6 @@
   var period = h.period || ""; 
   var payment = h.payment || ""; 
   var expiry = h.expiry || ""; 
-  var remarks = h.remarks || ""; 
   
   var subtotalVal = Number(data.totalAmount) || 0; 
   var taxVal = Math.floor(subtotalVal * 0.1); 
@@ -61,7 +60,6 @@
         .row-summary { background-color: #f9fafb; font-weight: bold; }
         .border-none { border: none !important; background: none !important; }
         
-        .footer-notes { margin-top: 20px; font-size: 9pt; color: #555; border-top: 1px solid #ccc; padding-top: 10px; }
         .page-break { page-break-before: always; }
         .page-number { font-size: 9pt; text-align: right; margin-top: -20px; margin-bottom: 10px; color: #666; }
     </style>
@@ -114,49 +112,46 @@
         </tr>
     </table>
     <div class="total-box">御見積金額： <?= total ?> <small>(税込)</small></div>
-    <? } else { ?>
-    <div style="border-bottom: 1px solid #333; margin-bottom: 10px; padding-bottom: 5px; font-weight: bold;">
-        工事名：<?= project ?> (続き)
-    </div>
     <? } ?>
 
     <div class="details-section">
         <table class="details-table">
             <colgroup>
-                <col style="width:5%;"><col style="width:45%;"><col style="width:10%;"><col style="width:10%;"><col style="width:15%;"><col style="width:15%;">
+                <col style="width:5%;"><col style="width:25%;"><col style="width:25%;"><col style="width:10%;"><col style="width:10%;"><col style="width:12%;"><col style="width:13%;">
             </colgroup>
             <tbody>
                 <tr>
-                    <td class="header-cell">No</td><td class="header-cell">品名・規格</td><td class="header-cell">数量</td><td class="header-cell">単位</td><td class="header-cell">単価</td><td class="header-cell">金額</td>
+                    <td class="header-cell">No</td><td class="header-cell">品名</td><td class="header-cell">仕様</td><td class="header-cell">数量</td><td class="header-cell">単位</td><td class="header-cell">単価</td><td class="header-cell">金額</td>
                 </tr>
                 <? for(var i = 0; i < items.length; i++) { ?>
                 <tr>
                     <? if (!items[i].isPadding) { ?>
                         <td class="text-center"><?= (p * 12) + i + 1 ?></td>
-                        <td><?= (items[i].product||"") + (items[i].spec ? ' ('+items[i].spec+')' : '') ?></td>
+                        <td><?= items[i].product || '' ?></td>
+                        <td><?= items[i].spec || '' ?></td>
                         <td class="text-right"><?= items[i].qty ?></td>
                         <td class="text-center"><?= items[i].unit ?></td>
                         <td class="text-right"><?= items[i].price ? Number(items[i].price).toLocaleString() : '' ?></td>
                         <td class="text-right"><?= items[i].amount ? Number(items[i].amount).toLocaleString() : '' ?></td>
                     <? } else { ?>
-                        <td><br></td><td></td><td></td><td></td><td></td><td></td>
+                        <td><br></td><td></td><td></td><td></td><td></td><td></td><td></td>
                     <? } ?>
                 </tr>
                 <? } ?>
 
                 <? if (p === pages.length - 1) { ?>
                 <tr class="row-summary">
-                    <td colspan="4" class="border-none"></td>
+                    <td colspan="5" class="border-none"></td>
                     <td class="text-center" style="border:1px solid #333;">小 計</td>
                     <td class="text-right" style="border:1px solid #333; padding-right:5px;"><?= subtotal ?></td>
                 </tr>
                 <tr class="row-summary">
-                    <td colspan="4" class="border-none"></td>
+                    <td colspan="5" class="border-none"></td>
                     <td class="text-center" style="border:1px solid #333;">消費税</td>
                     <td class="text-right" style="border:1px solid #333; padding-right:5px;"><?= tax ?></td>
                 </tr>
                 <tr class="row-summary">
-                    <td colspan="4" class="border-none"></td>
+                    <td colspan="5" class="border-none"></td>
                     <td class="text-center" style="border:1px solid #333;">合 計</td>
                     <td class="text-right" style="border:1px solid #333; font-size:11pt; padding-right:5px;"><?= total ?></td>
                 </tr>
@@ -164,13 +159,6 @@
             </tbody>
         </table>
     </div>
-    
-    <? if (p === pages.length - 1 && remarks) { ?>
-    <div class="footer-notes">
-        <div style="font-weight:bold; margin-bottom:5px;">【備考】</div>
-        <div style="white-space: pre-wrap;"><?= remarks ?></div>
-    </div>
-    <? } ?>
 
     <? } ?>
 </body>

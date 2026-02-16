@@ -1,32 +1,86 @@
-{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":1,"price":80000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771145695468}
-{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771145711277}
-{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771145711325}
-{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771145711326}
-{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771145713104}
-{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771145744417}
-{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771145761761}
-{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":6.1,"price":272000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146409755}
-{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":15.1,"price":390000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146426893}
-{"location":"index.html:calcLine","message":"calcLine fired","data":{"qty":2,"price":135000,"cost":1000,"hypothesisId":"H1"},"timestamp":1771146437273}
-{"location":"index.html:saveOrderFromPanel","message":"pre-save orderData","data":{"vendor":"松林建設","relEstId":"0000007-00","itemCount":3,"items":[{"category":"発注","product":"プレキャストL型","spec":"ハイタッチウォール H3750","qty":6.1,"unit":"m","cost":1000,"amount":6100},{"category":"発注","product":"プレキャストL型","spec":"ハイタッチウォール H4500","qty":15.1,"unit":"m","cost":1000,"amount":15100},{"category":"発注","product":"プレキャストL型","spec":"SL-IV H2500","qty":2,"unit":"m","cost":1000,"amount":2000}],"hypothesisId":"H3,H4"},"timestamp":1771146438524}
-{"location":"index.html:saveOrderFromPanel","message":"response received","data":{"res":"{\"success\":true,\"count\":3}","hypothesisId":"H3"},"timestamp":1771146441081}
-{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":15,"ids":["0000022-00","0000014-00","0000015-00","0000016-00","0000013-00"],"hypothesisId":"H5"},"timestamp":1771146442954}
-{"location":"index.html:saveOrderFromPanel","message":"post-fetchOrders","data":{"ordersCount":15,"hypothesisId":"H5"},"timestamp":1771146442954}
-{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771146475140}
-{"location":"index.html:fetchOrders","message":"orders loaded","data":{"count":14,"ids":["0000014-00","0000015-00","0000016-00","0000013-00","0000009-00"],"hypothesisId":"H5"},"timestamp":1771146486520}
-{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771147657452}
-{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771147657501}
-{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771147657503}
-{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771147659831}
-{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771148226042}
-{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771148226089}
-{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771148226091}
-{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771148227667}
-{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771148734712}
-{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771148734762}
-{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771148734764}
-{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771148736404}
-{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771149623515}
-{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771149623564}
-{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771149623566}
-{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771149626130}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771162906746}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771162906799}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771162906801}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771162908132}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771162910860,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1779},"timestamp":1771162914890,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771162914890,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":0,"unifiedProductsCount":1779},"timestamp":1771162916408,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771162916413,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"CB","totalProducts":1779},"timestamp":1771162919439,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"cb"},"timestamp":1771162919439,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"cb","resultCount":180},"timestamp":1771162919445,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"CB　","totalProducts":1779},"timestamp":1771162926864,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"cb","resultCount":180},"timestamp":1771162926869,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"cb"},"timestamp":1771162926865,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"CB　ヤスキ","totalProducts":1779},"timestamp":1771162928267,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"cb　ヤスキ"},"timestamp":1771162928267,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"cb　ヤスキ","resultCount":0},"timestamp":1771162928269,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"ヤスキ","totalProducts":1779},"timestamp":1771162932391,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"ヤスキ"},"timestamp":1771162932392,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"ヤスキ","resultCount":0},"timestamp":1771162932394,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"ヤスキ　","totalProducts":1779},"timestamp":1771162932739,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"ヤスキ"},"timestamp":1771162932740,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"ヤスキ","resultCount":0},"timestamp":1771162932742,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"ヤスキ","totalProducts":1779},"timestamp":1771162933993,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"ヤスキ"},"timestamp":1771162933994,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"ヤスキ","resultCount":0},"timestamp":1771162933997,"hypothesisId":"F,G"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":0,"unifiedProductsCount":1779},"timestamp":1771162938231,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"ヤス","totalProducts":1779},"timestamp":1771162941118,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"ヤス"},"timestamp":1771162941118,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"ヤス","resultCount":0},"timestamp":1771162941122,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"ヤ","totalProducts":1779},"timestamp":1771162941258,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"ヤ"},"timestamp":1771162941259,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"ヤ","resultCount":0},"timestamp":1771162941264,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771162941381,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"元請","totalProducts":1779},"timestamp":1771162959232,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"元請"},"timestamp":1771162959232,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"元請","resultCount":2},"timestamp":1771162959235,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"元","totalProducts":1779},"timestamp":1771162964076,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"元"},"timestamp":1771162964076,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"元","resultCount":2},"timestamp":1771162964084,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771162964594,"hypothesisId":"C,D"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"set","rowIndex":null,"unifiedProductsCount":1779},"timestamp":1771163031347,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":101,"unifiedProductsCount":1779},"timestamp":1771163233138,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":101,"unifiedProductsCount":1779},"timestamp":1771163261218,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":101,"unifiedProductsCount":1779},"timestamp":1771163270938,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":101,"unifiedProductsCount":1779},"timestamp":1771163364197,"hypothesisId":"A,E"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":101,"unifiedProductsCount":1779},"timestamp":1771163365963,"hypothesisId":"A,E"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771163386589}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771163386640}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771163386642}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771163389409}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771163392471,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1779},"timestamp":1771163395559,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771163395560,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":0,"unifiedProductsCount":1779},"timestamp":1771163396993,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771163396996,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"その他","totalProducts":1779},"timestamp":1771163421770,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"その他"},"timestamp":1771163421770,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"その他","resultCount":1},"timestamp":1771163421775,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"その","totalProducts":1779},"timestamp":1771163426277,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"その"},"timestamp":1771163426278,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"その","resultCount":1},"timestamp":1771163426283,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"そ","totalProducts":1779},"timestamp":1771163426447,"hypothesisId":"C,D"}
+{"location":"index.html:1580","message":"filter data types","data":{"sampleItems":[{"product":"string","spec":"string","productVal":"CB120 1段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 2段積","specVal":""},{"product":"string","spec":"string","productVal":"CB120 3段積","specVal":""}],"kw":"そ"},"timestamp":1771163426448,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed end","data":{"keyword":"そ","resultCount":1},"timestamp":1771163426454,"hypothesisId":"F,G"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771163426689,"hypothesisId":"C,D"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":0,"itemsLength":1,"master":{"product":"バリカー基礎 工場棟南側 SUSバリカー","price":13000}},"timestamp":1771163443170,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":1},"timestamp":1771163443172,"hypothesisId":"A"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771163552607}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771163552656}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771163552658}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771163554368}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771163556894,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1779},"timestamp":1771163561464,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771163561465,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":0,"unifiedProductsCount":1779},"timestamp":1771163562813,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1779},"timestamp":1771163562817,"hypothesisId":"C,D"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":0,"itemsLength":1,"master":{"product":"受水槽U字側溝敷設","price":50000}},"timestamp":1771163567437,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":1},"timestamp":1771163567439,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":1,"itemsLength":2,"master":{"product":"受水槽基礎","price":2200000}},"timestamp":1771163569726,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":2},"timestamp":1771163569727,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":2,"itemsLength":3,"master":{"product":"浄化槽制御盤基礎","price":130000}},"timestamp":1771163570639,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":3},"timestamp":1771163570639,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":3,"itemsLength":4,"master":{"product":"名古屋市型 見かけ1.5","price":110000}},"timestamp":1771163576301,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":4},"timestamp":1771163576302,"hypothesisId":"A"}

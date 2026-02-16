@@ -1,8 +1,16 @@
+<? 
+  var subtotalVal = Number(data.totalAmount) || 0; 
+  var taxVal = Math.floor(subtotalVal * 0.1); 
+  var totalVal = subtotalVal + taxVal; 
+  var subtotal = subtotalVal.toLocaleString(); 
+  var tax = taxVal.toLocaleString(); 
+  var total = "￥" + totalVal.toLocaleString() + "-"; 
+?>
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>発注書</title>
+  <title>注文書</title>
   <style>
     @page { size: A4 portrait; margin: 0; }
     body { font-family: 'MS PMincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif; padding: 40px; color: #333; font-size: 10.5pt; }
@@ -13,6 +21,10 @@
     .flex-container td { vertical-align: top; }
     
     .customer-name { font-size: 16pt; font-weight: 700; border-bottom: 1px solid #333; min-width: 250px; display: inline-block; margin-bottom: 15px; }
+    
+    .condition-table { font-size: 9pt; width: 100%; }
+    .condition-table td { padding: 2px 0; }
+    .label { width: 80px; font-weight: bold; }
     
     .company-block { display: inline-block; text-align: left; vertical-align: top; }
     
@@ -27,8 +39,10 @@
     .logo-img { max-height: 50px; vertical-align: middle; margin-right: 10px; }
     
     .details-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-    .details-table td { border: 1px solid #333; padding: 5px; }
+    .details-table th, .details-table td { border: 1px solid #333; padding: 5px; }
     .header-cell { background-color: #e5e7eb; font-weight: bold; text-align: center; }
+    .row-summary { background-color: #f9fafb; font-weight: bold; }
+    .border-none { border: none !important; background: none !important; }
     .text-right { text-align: right; }
     .text-center { text-align: center; }
     .page-break { page-break-before: always; }
@@ -38,15 +52,20 @@
   <? for(var p = 0; p < data.pages.length; p++) { var items = data.pages[p]; ?>
   <? if (p > 0) { ?><div class="page-break"></div><? } ?>
   
-  <div class="page-header"><span class="main-title">発 注 書</span></div>
+  <div class="page-header"><span class="main-title">注 文 書</span></div>
   
   <table class="flex-container">
     <tr>
       <td style="width: 55%;">
         <div class="customer-name"><?= data.header.vendor ?> 御中</div>
         <div style="margin-bottom:10px;">下記案件について発注いたします。</div>
-        <div>件名: <?= data.header.relEstId ?> 関連工事</div>
-        <div>納品場所: <?= data.header.location ?></div>
+        <table class="condition-table">
+            <tr><td class="label">工事名</td><td>： <?= data.header.project || data.header.relEstId || "" ?></td></tr>
+            <tr><td class="label">工事場所</td><td>： <?= data.header.location || "" ?></td></tr>
+            <tr><td class="label">工期</td><td>： <?= data.header.period || "" ?></td></tr>
+            <tr><td class="label">決済条件</td><td>： <?= data.header.payment || "" ?></td></tr>
+            <tr><td class="label">有効期限</td><td>： <?= data.header.expiry || "" ?></td></tr>
+        </table>
       </td>
       <td style="width: 45%; text-align: right;">
         <div class="company-block">
@@ -90,13 +109,25 @@
           <? } ?>
         </tr>
       <? }); ?>
+      <? if (p === data.pages.length - 1) { ?>
+        <tr class="row-summary">
+          <td colspan="4" class="border-none"></td>
+          <td class="text-center" style="border:1px solid #333;">小 計</td>
+          <td class="text-right" style="border:1px solid #333; padding-right:5px;"><?= subtotal ?></td>
+        </tr>
+        <tr class="row-summary">
+          <td colspan="4" class="border-none"></td>
+          <td class="text-center" style="border:1px solid #333;">消費税</td>
+          <td class="text-right" style="border:1px solid #333; padding-right:5px;"><?= tax ?></td>
+        </tr>
+        <tr class="row-summary">
+          <td colspan="4" class="border-none"></td>
+          <td class="text-center" style="border:1px solid #333;">合 計 <small>(税込)</small></td>
+          <td class="text-right" style="border:1px solid #333; font-size:11pt; padding-right:5px;"><?= total ?></td>
+        </tr>
+      <? } ?>
     </tbody>
   </table>
-  
-  <div style="margin-top: 20px; border: 1px solid #333; padding: 10px; font-size:9pt;">
-    <strong>備考:</strong><br>
-    <?= data.header.remarks ?>
-  </div>
   <? } ?>
 </body>
 </html>

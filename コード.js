@@ -533,14 +533,20 @@ function apiGetDrafts() {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return JSON.stringify([]);
   const draftsMap = new Map();
+  let currentId = null;
   for (let i = 1; i < data.length; i++) {
-    const row = data[i]; const id = String(row[0]);
-    if (!id) continue;
-    if (!draftsMap.has(id)) {
-        draftsMap.set(id, { id: id, date: formatDate(row[1]), timestamp: new Date(row[1]).getTime(), client: row[2], project: row[13], status: row[17], totalAmount: 0 });
+    const row = data[i];
+    const id = String(row[0] || "").trim();
+    if (id) {
+      currentId = id;
+      if (!draftsMap.has(id)) {
+        draftsMap.set(id, { id: id, date: formatDate(row[1]), timestamp: new Date(row[1] || 0).getTime(), client: row[2], project: row[13], status: row[17], totalAmount: 0 });
+      }
     }
-    const amount = Number(row[10]) || 0;
-    draftsMap.get(id).totalAmount += amount;
+    if (currentId && draftsMap.has(currentId) && String(row[4])) {
+      const amount = Number(row[10]) || 0;
+      draftsMap.get(currentId).totalAmount += amount;
+    }
   }
   const list = Array.from(draftsMap.values());
   list.sort((a, b) => b.timestamp - a.timestamp);
@@ -893,8 +899,18 @@ function apiCreateOrderPdf(jsonData, targetVendor) {
   const data = JSON.parse(jsonData);
   
   if (targetVendor) {
-    data.items = data.items.filter(item => item.vendor === targetVendor);
     data.header.vendor = targetVendor;
+    const filtered = data.items.filter(item => item.vendor === targetVendor);
+    const hasAnyVendor = data.items.some(item => (item.vendor || '').trim() !== '');
+    
+    if (filtered.length > 0) {
+      data.items = filtered;
+    } else if (!hasAnyVendor) {
+      // 明細にvendorが無い場合（単独発注画面等）は全件を対象にvendorを付与
+      data.items = data.items.map(item => Object.assign({}, item, { vendor: targetVendor }));
+    } else {
+      data.items = filtered; // 該当発注先の明細が無い
+    }
   }
 
   if (!data.items || data.items.length === 0) {
@@ -904,7 +920,24 @@ function apiCreateOrderPdf(jsonData, targetVendor) {
   const now = new Date();
   data.header.honorific = " 御中"; 
   data.header.date = getJapaneseDateStr(now);
+  data.totalAmount = data.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   data.pages = paginateItems(data.items, 12);
+
+  // 関連見積IDがある場合、見積データから工事名・工期・決済条件・有効期限を取得
+  if (data.header.relEstId) {
+    const estimateData = _getEstimateData(data.header.relEstId);
+    if (estimateData && estimateData.header) {
+      data.header.project = estimateData.header.project || data.header.project || "";
+      data.header.location = data.header.location || estimateData.header.location || "";
+      data.header.period = estimateData.header.period || data.header.period || "";
+      data.header.payment = estimateData.header.payment || data.header.payment || "";
+      data.header.expiry = estimateData.header.expiry || data.header.expiry || "";
+    }
+  }
+  if (!data.header.project) data.header.project = "";
+  if (!data.header.period) data.header.period = "";
+  if (!data.header.payment) data.header.payment = "";
+  if (!data.header.expiry) data.header.expiry = "";
 
   let template; 
   try { template = HtmlService.createTemplateFromFile('order_template'); } 
@@ -961,30 +994,44 @@ function apiGetOrderDetails(orderId) {
   const col = {}; headers.forEach((h, i) => { col[String(h).trim()] = i; });
   const items = [];
   let header = null;
+  let currentId = '';
   for (let i = hIdx + 1; i < data.length; i++) {
     const row = data[i];
-    if (row[col['ID']] === orderId) {
-      if (!header) {
-        header = {
-          id: orderId,
-          vendor: row[col['発注先']],
-          date: row[col['日付']],
-          relEstId: row[col['関連見積ID']] || '',
-          location: row[col['納品場所']] || '',
-          remarks: row[col['備考']] || ''
-        };
-      }
-      items.push({
-        product: row[col['品名']] || '',
-        spec: row[col['仕様']] || '',
-        qty: parseCurrency(row[col['数量']]) || 0,
-        unit: row[col['単位']] || '',
-        cost: parseCurrency(row[col['単価']]) || 0,
-        amount: parseCurrency(row[col['金額']]) || 0
-      });
+    const idCell = row[col['ID']];
+    if (idCell && idCell !== 'ID') { currentId = idCell; }
+    if (!currentId || currentId !== orderId) continue;
+    if (!header) {
+      header = {
+        id: orderId,
+        vendor: row[col['発注先']],
+        date: row[col['日付']],
+        relEstId: row[col['関連見積ID']] || '',
+        location: row[col['納品場所']] || '',
+        remarks: row[col['備考']] || ''
+      };
     }
+    items.push({
+      category: row[col['工種']] || '',
+      product: row[col['品名']] || '',
+      spec: row[col['仕様']] || '',
+      qty: parseCurrency(row[col['数量']]) || 0,
+      unit: row[col['単位']] || '',
+      cost: parseCurrency(row[col['単価']]) || 0,
+      amount: parseCurrency(row[col['金額']]) || 0
+    });
   }
   if (!header) return JSON.stringify({ error: "指定された発注が見つかりません" });
+  // 関連見積IDがある場合、見積から工事名・工期・決済条件・有効期限を取得
+  if (header.relEstId) {
+    const est = _getEstimateData(header.relEstId);
+    if (est && est.header) {
+      header.project = est.header.project || "";
+      header.period = est.header.period || "";
+      header.payment = est.header.payment || "";
+      header.expiry = est.header.expiry || "";
+      if (!header.location && est.header.location) header.location = est.header.location;
+    }
+  }
   return JSON.stringify({ header, items });
 }
 
