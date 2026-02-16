@@ -130,3 +130,21 @@
 {"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1780},"timestamp":1771201584578,"hypothesisId":"C,D"}
 {"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":1},"timestamp":1771201586189,"hypothesisId":"A"}
 {"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":0,"itemsLength":1,"master":{"product":"CB120 3段積","price":10800}},"timestamp":1771201586186,"hypothesisId":"A"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771202574984}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771202575100}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771202575105}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771202576524}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771202579490,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771202583610,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771202583611,"hypothesisId":"B"}
+{"location":"index.html:1726","message":"openLeftPanel called","data":{"mode":"price","rowIndex":0,"unifiedProductsCount":1780},"timestamp":1771202585316,"hypothesisId":"A,E"}
+{"location":"index.html:1580","message":"filteredMasters computed start","data":{"keyword":"","totalProducts":1780},"timestamp":1771202585322,"hypothesisId":"C,D"}
+{"location":"index.html:1742","message":"applyMasterItem called","data":{"activeRow":0,"itemsLength":1,"master":{"product":"CB120 3段積","price":10800}},"timestamp":1771202587508,"hypothesisId":"A"}
+{"location":"index.html:1742","message":"applyMasterItem success","data":{"newActiveRow":1},"timestamp":1771202587511,"hypothesisId":"A"}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771204180291}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771204180349}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771204180351}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771204182812}
+{"location":"index.html:2301","message":"createNewEstimate start","data":{"unifiedProductsCount":0},"timestamp":1771204198479,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"unified products loaded","data":{"count":1780},"timestamp":1771204202175,"hypothesisId":"B,E"}
+{"location":"index.html:2301","message":"loading state cleared","data":{"loadingValue":false},"timestamp":1771204202175,"hypothesisId":"B"}

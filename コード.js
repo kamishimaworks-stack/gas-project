@@ -16,6 +16,8 @@ const CONFIG = {
     list: '見積リスト',
     order: '発注リスト',
     invoice: '受取請求書リスト',
+    deposits: '入金リスト',
+    payments: '出金リスト',
     masterBasic: '基本単価マスタ',
     masterClient: '元請別単価マスタ',
     masterSet: '見積セットマスタ',
@@ -34,6 +36,8 @@ function invalidateDataCache_() {
     c.remove("projects_data");
     c.remove("orders_data");
     c.remove("active_projects_data");
+    c.remove("deposits_data");
+    c.remove("payments_data");
     const y = new Date().getFullYear();
     for (let i = y - 2; i <= y + 1; i++) c.remove("analysis_" + i);
   } catch (e) { /* ignore */ }
@@ -233,14 +237,26 @@ function checkAndFixJournalConfig(sheet) {
     sheet.appendRow(["出力項目名(CSVヘッダー)", "データソース", "固定値/フォーマット/デフォルト", "順序", "タイプ(仕入/売上/共通)", "", "【集計対象 取引先名 (売上)】", "【集計対象 取引先名 (仕入)】"]);
     const defaults = [
       ["取引先名", "client", "", 1, "売上"], ["前月繰越", "fixed", "0", 2, "売上"], ["当月発生高", "amount", "", 3, "売上"],
-      ["当月値引割引高", "fixed", "0", 4, "売上"], ["現金・小切手(入金・支払)高", "fixed", "0", 5, "売上"], ["手　形", "fixed", "0", 6, "売上"], 
-      ["相　殺", "fixed", "0", 7, "売上"], ["振込料", "fixed", "0", 8, "売上"], ["その他", "summary", "", 9, "売上"], ["翌月繰越高", "fixed", "0", 10, "売上"], 
+      ["当月値引割引高", "fixed", "0", 4, "売上"], ["現金・小切手(入金・支払)高", "cash_check", "", 5, "売上"], ["手　形", "bill", "", 6, "売上"], 
+      ["相　殺", "fixed", "0", 7, "売上"], ["振込料", "fixed", "0", 8, "売上"], ["その他", "other", "", 9, "売上"], ["翌月繰越高", "fixed", "0", 10, "売上"], 
       ["取引先名", "supplier", "", 1, "仕入"], ["前月繰越", "fixed", "0", 2, "仕入"], ["当月発生高", "amount", "", 3, "仕入"],
-      ["当月値引割引高", "fixed", "0", 4, "仕入"], ["現金・小切手(入金・支払)高", "fixed", "0", 5, "仕入"], ["手　形", "fixed", "0", 6, "仕入"],
-      ["相　殺", "offset", "", 7, "仕入"], ["振込料", "fixed", "0", 8, "仕入"], ["その他", "summary", "", 9, "仕入"], ["翌月繰越高", "fixed", "0", 10, "仕入"]
+      ["当月値引割引高", "fixed", "0", 4, "仕入"], ["現金・小切手(入金・支払)高", "cash_check", "", 5, "仕入"], ["手　形", "bill", "", 6, "仕入"],
+      ["相　殺", "offset", "", 7, "仕入"], ["振込料", "fixed", "0", 8, "仕入"], ["その他", "other", "", 9, "仕入"], ["翌月繰越高", "fixed", "0", 10, "仕入"]
     ];
     sheet.getRange(2, 1, defaults.length, 5).setValues(defaults);
   }
+}
+
+function checkAndFixDepositsHeader(sheet) {
+  if (!sheet) return;
+  const headers = ["ID", "登録日時", "入金日", "関連見積ID", "取引先名", "工事名", "入金種別", "入金金額", "振込手数料", "相殺金額", "備考", "ステータス", "登録者", "公開範囲"];
+  if (sheet.getLastRow() === 0) { sheet.appendRow(headers); }
+}
+
+function checkAndFixPaymentsHeader(sheet) {
+  if (!sheet) return;
+  const headers = ["ID", "登録日時", "出金日", "関連発注ID", "関連請求書ID", "支払先名", "工事名", "出金種別", "出金金額", "振込手数料", "相殺金額", "備考", "ステータス", "登録者", "公開範囲"];
+  if (sheet.getLastRow() === 0) { sheet.appendRow(headers); }
 }
 
 // -----------------------------------------------------------
@@ -1322,19 +1338,227 @@ function apiGetOrderBalance(constructionId, supplierName) {
 }
 
 // -----------------------------------------------------------
+// 入出金管理 API
+// -----------------------------------------------------------
+
+function getNextDepositId_() {
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd");
+  const props = PropertiesService.getScriptProperties();
+  const key = "SEQ_DEPOSIT_" + dateStr;
+  const lock = LockService.getScriptLock();
+  try {
+    if (lock.tryLock(5000)) {
+      let current = Number(props.getProperty(key)) || 0;
+      current++;
+      props.setProperty(key, String(current));
+      return "DEP-" + dateStr + "-" + String(current).padStart(5, "0");
+    }
+    throw new Error("ID採番タイムアウト");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getNextPaymentId_() {
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd");
+  const props = PropertiesService.getScriptProperties();
+  const key = "SEQ_PAYMENT_" + dateStr;
+  const lock = LockService.getScriptLock();
+  try {
+    if (lock.tryLock(5000)) {
+      let current = Number(props.getProperty(key)) || 0;
+      current++;
+      props.setProperty(key, String(current));
+      return "PAY-" + dateStr + "-" + String(current).padStart(5, "0");
+    }
+    throw new Error("ID採番タイムアウト");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiGetDeposits() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("deposits_data");
+  if (cached) return cached;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.sheetNames.deposits);
+  if (!sheet) { sheet = ss.insertSheet(CONFIG.sheetNames.deposits); checkAndFixDepositsHeader(sheet); return JSON.stringify([]); }
+  if (sheet.getLastRow() < 2) return JSON.stringify([]);
+
+  const data = sheet.getDataRange().getDisplayValues();
+  const deposits = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    deposits.push({
+      id: row[0], registeredAt: row[1], date: row[2], estimateId: row[3], client: row[4], project: row[5],
+      type: row[6], amount: parseCurrency(row[7]), fee: parseCurrency(row[8]), offset: parseCurrency(row[9]),
+      remarks: row[10], status: row[11], registrant: row[12], visibility: row[13] || "public"
+    });
+  }
+  deposits.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const result = JSON.stringify(deposits);
+  try { cache.put("deposits_data", result, CACHE_TTL_ORDERS); } catch (e) { /* ignore */ }
+  return result;
+}
+
+function apiGetPayments() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("payments_data");
+  if (cached) return cached;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.sheetNames.payments);
+  if (!sheet) { sheet = ss.insertSheet(CONFIG.sheetNames.payments); checkAndFixPaymentsHeader(sheet); return JSON.stringify([]); }
+  if (sheet.getLastRow() < 2) return JSON.stringify([]);
+
+  const data = sheet.getDataRange().getDisplayValues();
+  const payments = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    payments.push({
+      id: row[0], registeredAt: row[1], date: row[2], orderId: row[3], invoiceId: row[4], supplier: row[5], project: row[6],
+      type: row[7], amount: parseCurrency(row[8]), fee: parseCurrency(row[9]), offset: parseCurrency(row[10]),
+      remarks: row[11], status: row[12], registrant: row[13], visibility: row[14] || "public"
+    });
+  }
+  payments.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const result = JSON.stringify(payments);
+  try { cache.put("payments_data", result, CACHE_TTL_ORDERS); } catch (e) { /* ignore */ }
+  return result;
+}
+
+function apiSaveDeposit(jsonData) {
+  const data = JSON.parse(jsonData);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return JSON.stringify({ success: false, message: "Busy" });
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(CONFIG.sheetNames.deposits);
+    if (!sheet) { sheet = ss.insertSheet(CONFIG.sheetNames.deposits); checkAndFixDepositsHeader(sheet); }
+
+    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy/MM/dd HH:mm");
+    const email = Session.getActiveUser().getEmail();
+    let id = data.id;
+
+    if (id) {
+      const sheetData = sheet.getDataRange().getValues();
+      for (let i = 1; i < sheetData.length; i++) {
+        if (String(sheetData[i][0]) === String(id)) {
+          const rowValues = [
+            id, now, data.date || now, data.estimateId || "", data.client || "", data.project || "",
+            data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
+            data.remarks || "", data.status || "確認済", email, data.visibility || "public"
+          ];
+          sheet.getRange(i + 1, 1, i + 1, rowValues.length).setValues([rowValues]);
+          invalidateDataCache_();
+          return JSON.stringify({ success: true, id: id });
+        }
+      }
+    }
+
+    id = id || getNextDepositId_();
+    const rowValues = [
+      id, now, data.date || now, data.estimateId || "", data.client || "", data.project || "",
+      data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
+      data.remarks || "", data.status || "確認済", email, data.visibility || "public"
+    ];
+    sheet.appendRow(rowValues);
+    invalidateDataCache_();
+    return JSON.stringify({ success: true, id: id });
+  } catch (e) {
+    return JSON.stringify({ success: false, message: e.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiSavePayment(jsonData) {
+  const data = JSON.parse(jsonData);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return JSON.stringify({ success: false, message: "Busy" });
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(CONFIG.sheetNames.payments);
+    if (!sheet) { sheet = ss.insertSheet(CONFIG.sheetNames.payments); checkAndFixPaymentsHeader(sheet); }
+
+    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy/MM/dd HH:mm");
+    const email = Session.getActiveUser().getEmail();
+    let id = data.id;
+
+    if (id) {
+      const sheetData = sheet.getDataRange().getValues();
+      for (let i = 1; i < sheetData.length; i++) {
+        if (String(sheetData[i][0]) === String(id)) {
+          const rowValues = [
+            id, now, data.date || now, data.orderId || "", data.invoiceId || "", data.supplier || "", data.project || "",
+            data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
+            data.remarks || "", data.status || "確認済", email, data.visibility || "public"
+          ];
+          sheet.getRange(i + 1, 1, i + 1, rowValues.length).setValues([rowValues]);
+          invalidateDataCache_();
+          return JSON.stringify({ success: true, id: id });
+        }
+      }
+    }
+
+    id = id || getNextPaymentId_();
+    const rowValues = [
+      id, now, data.date || now, data.orderId || "", data.invoiceId || "", data.supplier || "", data.project || "",
+      data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
+      data.remarks || "", data.status || "確認済", email, data.visibility || "public"
+    ];
+    sheet.appendRow(rowValues);
+    invalidateDataCache_();
+    return JSON.stringify({ success: true, id: id });
+  } catch (e) {
+    return JSON.stringify({ success: false, message: e.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apiGetDepositsByEstimate(estimateId) {
+  if (!estimateId) return JSON.stringify([]);
+  const allJson = apiGetDeposits();
+  const all = JSON.parse(allJson);
+  const filtered = all.filter(d => String(d.estimateId || "").trim() === String(estimateId).trim());
+  return JSON.stringify(filtered);
+}
+
+function apiGetPaymentsByOrder(orderId) {
+  if (!orderId) return JSON.stringify([]);
+  const allJson = apiGetPayments();
+  const all = JSON.parse(allJson);
+  const filtered = all.filter(p => String(p.orderId || "").trim() === String(orderId).trim());
+  return JSON.stringify(filtered);
+}
+
+// -----------------------------------------------------------
 // 会計・台帳・分析
 // -----------------------------------------------------------
 
 function apiGetJournalYears() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(CONFIG.sheetNames.invoice);
-  if (!sheet) return JSON.stringify([new Date().getFullYear()]);
-  const data = sheet.getDataRange().getValues();
   const years = new Set();
-  for (let i = 1; i < data.length; i++) {
-    let dStr = data[i][7]; if (!dStr) dStr = data[i][2]; 
-    try { const d = new Date(dStr); if (!isNaN(d.getTime())) years.add(d.getFullYear()); } catch(e) {}
-  }
+  const addYearsFromSheet = (sheet, dateColIndex) => {
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const dStr = data[i][dateColIndex] || data[i][2];
+      try { const d = new Date(dStr); if (!isNaN(d.getTime())) years.add(d.getFullYear()); } catch(e) {}
+    }
+  };
+  addYearsFromSheet(ss.getSheetByName(CONFIG.sheetNames.invoice), 7);
+  addYearsFromSheet(ss.getSheetByName(CONFIG.sheetNames.deposits), 2);
+  addYearsFromSheet(ss.getSheetByName(CONFIG.sheetNames.payments), 2);
   const list = Array.from(years).sort((a, b) => b - a);
   if (list.length === 0) list.push(new Date().getFullYear());
   return JSON.stringify(list);
@@ -1371,7 +1595,8 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
   }
   if (includePurchases) {
     const agg = {};
-    purchaseSuppliers.forEach(s => agg[s] = { amount: 0, offset: 0 });
+    const initPurchaseAgg = () => ({ amount: 0, offset: 0, cash: 0, check: 0, bill: 0, transfer: 0, other: 0 });
+    purchaseSuppliers.forEach(s => agg[s] = initPurchaseAgg());
     const iSheet = ss.getSheetByName(CONFIG.sheetNames.invoice);
     if (iSheet && iSheet.getLastRow() > 1) {
         const iData = iSheet.getDataRange().getValues();
@@ -1383,22 +1608,51 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
             if (isNaN(date.getTime()) || date.getFullYear() != year || (date.getMonth() + 1) != month) continue;
             const supplier = String(row[6]).trim();
             if (!agg[supplier]) {
-                if (purchaseSuppliers.length === 0) agg[supplier] = { amount: 0, offset: 0 }; 
+                if (purchaseSuppliers.length === 0) agg[supplier] = initPurchaseAgg(); 
                 else continue; 
             }
             agg[supplier].amount += (Number(row[8]) || 0);
             agg[supplier].offset += (Number(row[9]) || 0);
         }
     }
+    const pSheet = ss.getSheetByName(CONFIG.sheetNames.payments);
+    if (pSheet && pSheet.getLastRow() > 1) {
+        const pData = pSheet.getDataRange().getValues();
+        for (let i = 1; i < pData.length; i++) {
+            const row = pData[i];
+            if (row[12] === '取消') continue;
+            const date = new Date(row[2]);
+            if (isNaN(date.getTime()) || date.getFullYear() != year || (date.getMonth() + 1) != month) continue;
+            const supplier = String(row[5]).trim();
+            if (!agg[supplier]) {
+                if (purchaseSuppliers.length === 0) agg[supplier] = initPurchaseAgg();
+                else continue;
+            }
+            const type = String(row[7]).trim();
+            const amount = Number(row[8]) || 0;
+            if (type === '現金') agg[supplier].cash += amount;
+            else if (type === '小切手') agg[supplier].check += amount;
+            else if (type === '手形') agg[supplier].bill += amount;
+            else if (type === '振込') agg[supplier].transfer += amount;
+            else if (type === '相殺') agg[supplier].offset += (Number(row[10]) || 0);
+            else agg[supplier].other += amount;
+        }
+    }
     const targetSuppliers = purchaseSuppliers.length > 0 ? purchaseSuppliers : Object.keys(agg);
     targetSuppliers.forEach(supplier => {
-        const data = agg[supplier] || { amount: 0, offset: 0 };
+        const data = agg[supplier] || initPurchaseAgg();
         const rowData = configPurchase.map(c => {
             const source = c[1]; const fixed = c[2];
             if (source === "fixed") return fixed;
             if (source === "date") return `${year}/${String(month).padStart(2,'0')}`;
             if (source === "amount") return data.amount;
             if (source === "offset") return data.offset;
+            if (source === "cash") return data.cash || 0;
+            if (source === "check") return data.check || 0;
+            if (source === "bill") return data.bill || 0;
+            if (source === "transfer") return data.transfer || 0;
+            if (source === "other") return data.other || 0;
+            if (source === "cash_check") return (data.cash || 0) + (data.check || 0);
             if (source === "supplier" || source === "client") return supplier;
             return "";
         });
@@ -1407,7 +1661,8 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
   }
   if (includeSales) {
     const agg = {};
-    salesClients.forEach(c => agg[c] = { amount: 0 });
+    const initSalesAgg = () => ({ amount: 0, cash: 0, check: 0, bill: 0, transfer: 0, other: 0 });
+    salesClients.forEach(c => agg[c] = initSalesAgg());
     const lSheet = ss.getSheetByName(CONFIG.sheetNames.list);
     if (lSheet && lSheet.getLastRow() > 1) {
         const lData = lSheet.getDataRange().getValues();
@@ -1420,7 +1675,7 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
             if (isNaN(date.getTime()) || date.getFullYear() != year || (date.getMonth() + 1) != month) return;
             const client = String(headerRow[2]).trim();
             if (!agg[client]) {
-                if (salesClients.length === 0) agg[client] = { amount: 0 };
+                if (salesClients.length === 0) agg[client] = initSalesAgg();
                 else return;
             }
             agg[client].amount += tempAmount;
@@ -1432,14 +1687,42 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
         }
         processAgg();
     }
+    const dSheet = ss.getSheetByName(CONFIG.sheetNames.deposits);
+    if (dSheet && dSheet.getLastRow() > 1) {
+        const dData = dSheet.getDataRange().getValues();
+        for (let i = 1; i < dData.length; i++) {
+            const row = dData[i];
+            if (row[11] === '取消') continue;
+            const date = new Date(row[2]);
+            if (isNaN(date.getTime()) || date.getFullYear() != year || (date.getMonth() + 1) != month) continue;
+            const client = String(row[4]).trim();
+            if (!agg[client]) {
+                if (salesClients.length === 0) agg[client] = initSalesAgg();
+                else continue;
+            }
+            const type = String(row[6]).trim();
+            const amount = Number(row[7]) || 0;
+            if (type === '現金') agg[client].cash += amount;
+            else if (type === '小切手') agg[client].check += amount;
+            else if (type === '手形') agg[client].bill += amount;
+            else if (type === '振込') agg[client].transfer += amount;
+            else agg[client].other += amount;
+        }
+    }
     const targetClients = salesClients.length > 0 ? salesClients : Object.keys(agg);
     targetClients.forEach(client => {
-        const data = agg[client] || { amount: 0 };
+        const data = agg[client] || initSalesAgg();
         const rowData = configSales.map(c => {
             const source = c[1]; const fixed = c[2];
             if (source === "fixed") return fixed;
             if (source === "date") return `${year}/${String(month).padStart(2,'0')}`;
             if (source === "amount") return data.amount;
+            if (source === "cash") return data.cash || 0;
+            if (source === "check") return data.check || 0;
+            if (source === "bill") return data.bill || 0;
+            if (source === "transfer") return data.transfer || 0;
+            if (source === "other") return data.other || 0;
+            if (source === "cash_check") return (data.cash || 0) + (data.check || 0);
             if (source === "supplier" || source === "client") return client;
             return "";
         });

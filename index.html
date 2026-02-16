@@ -365,6 +365,55 @@
       </div>
     </transition>
 
+    <!-- 入金登録モーダル -->
+    <transition name="modal">
+      <div v-if="showDepositModal" class="modal-overlay" style="z-index: 2500;">
+        <div class="modal-content w-full max-w-lg">
+          <div class="modal-header"><span>入金登録</span><button @click="showDepositModal=false">×</button></div>
+          <div class="modal-body space-y-2 text-sm">
+            <div><label class="block font-bold mb-1">入金日</label><input v-model="depositForm.date" type="date" class="border p-1 w-full"></div>
+            <div><label class="block font-bold mb-1">取引先名 <span class="text-red-500">*</span></label><input v-model="depositForm.client" class="border p-1 w-full" placeholder="顧客名"></div>
+            <div><label class="block font-bold mb-1">工事名</label><input v-model="depositForm.project" class="border p-1 w-full" placeholder="対象工事"></div>
+            <div><label class="block font-bold mb-1">関連見積ID</label><input v-model="depositForm.estimateId" class="border p-1 w-full" placeholder="見積ID"></div>
+            <div><label class="block font-bold mb-1">入金種別</label><select v-model="depositForm.type" class="border p-1 w-full"><option>振込</option><option>現金</option><option>小切手</option><option>手形</option><option>相殺</option><option>その他</option></select></div>
+            <div><label class="block font-bold mb-1">入金金額 <span class="text-red-500">*</span></label><input v-model.number="depositForm.amount" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">振込手数料</label><input v-model.number="depositForm.fee" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">相殺金額</label><input v-model.number="depositForm.offset" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">備考</label><input v-model="depositForm.remarks" class="border p-1 w-full" placeholder="メモ"></div>
+          </div>
+          <div class="p-2 border-t flex justify-end gap-2">
+            <button @click="showDepositModal=false" class="bg-gray-400 text-white px-4 py-2 rounded">キャンセル</button>
+            <button @click="saveDeposit" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">保存</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 出金登録モーダル -->
+    <transition name="modal">
+      <div v-if="showPaymentModal" class="modal-overlay" style="z-index: 2500;">
+        <div class="modal-content w-full max-w-lg">
+          <div class="modal-header"><span>出金登録</span><button @click="showPaymentModal=false">×</button></div>
+          <div class="modal-body space-y-2 text-sm">
+            <div><label class="block font-bold mb-1">出金日</label><input v-model="paymentForm.date" type="date" class="border p-1 w-full"></div>
+            <div><label class="block font-bold mb-1">支払先名 <span class="text-red-500">*</span></label><input v-model="paymentForm.supplier" class="border p-1 w-full" placeholder="業者名"></div>
+            <div><label class="block font-bold mb-1">工事名</label><input v-model="paymentForm.project" class="border p-1 w-full" placeholder="対象工事"></div>
+            <div><label class="block font-bold mb-1">関連発注ID</label><input v-model="paymentForm.orderId" class="border p-1 w-full" placeholder="発注ID"></div>
+            <div><label class="block font-bold mb-1">関連請求書ID</label><input v-model="paymentForm.invoiceId" class="border p-1 w-full" placeholder="請求書ID"></div>
+            <div><label class="block font-bold mb-1">出金種別</label><select v-model="paymentForm.type" class="border p-1 w-full"><option>振込</option><option>現金</option><option>小切手</option><option>手形</option><option>相殺</option><option>その他</option></select></div>
+            <div><label class="block font-bold mb-1">出金金額 <span class="text-red-500">*</span></label><input v-model.number="paymentForm.amount" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">振込手数料</label><input v-model.number="paymentForm.fee" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">相殺金額</label><input v-model.number="paymentForm.offset" type="number" class="border p-1 w-full text-right" placeholder="0"></div>
+            <div><label class="block font-bold mb-1">備考</label><input v-model="paymentForm.remarks" class="border p-1 w-full" placeholder="メモ"></div>
+          </div>
+          <div class="p-2 border-t flex justify-end gap-2">
+            <button @click="showPaymentModal=false" class="bg-gray-400 text-white px-4 py-2 rounded">キャンセル</button>
+            <button @click="savePayment" class="bg-red-600 text-white px-4 py-2 rounded font-bold">保存</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <header style="background-color: var(--header-bg); color: white; padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
       <div class="flex items-center gap-2 cursor-pointer" @click="checkUnsavedChanges(() => goHome())">
         <span class="material-icons">architecture</span>
@@ -1031,6 +1080,8 @@
               <button @click="adminSubTab='approval'" class="px-4 py-2 font-bold" :class="adminSubTab==='approval' ? 'bg-yellow-100 border-b-2 border-yellow-600' : 'text-gray-500'">承認・管理</button>
               <button @click="loadAnalysis" class="px-4 py-2 font-bold" :class="adminSubTab==='analysis' ? 'bg-indigo-100 border-b-2 border-indigo-600' : 'text-gray-500'">経営分析</button>
               <button @click="adminSubTab='accounting'" class="px-4 py-2 font-bold" :class="adminSubTab==='accounting' ? 'bg-green-100 border-b-2 border-green-600' : 'text-gray-500'">会計連携</button>
+              <button @click="adminSubTab='deposits'; fetchDeposits()" class="px-4 py-2 font-bold" :class="adminSubTab==='deposits' ? 'bg-blue-100 border-b-2 border-blue-600' : 'text-gray-500'">入金管理</button>
+              <button @click="adminSubTab='payments'; fetchPayments()" class="px-4 py-2 font-bold" :class="adminSubTab==='payments' ? 'bg-red-100 border-b-2 border-red-600' : 'text-gray-500'">出金管理</button>
           </div>
 
           <!-- 承認・管理タブ -->
@@ -1176,7 +1227,66 @@
                       </div>
                   </div>
                   <div class="text-xs text-gray-500 mt-1 pl-2">※「確認済」または「支払済」の受取請求書のみ出力されます。</div>
+                  <div class="text-xs text-gray-600 mt-2 p-2 bg-blue-50 rounded">「入金管理」「出金管理」に実データを登録すると、現金・小切手・手形・振込等の項目に実績値が反映されます。</div>
                </div>
+          </div>
+
+          <!-- 入金管理タブ -->
+          <div v-if="adminSubTab === 'deposits'" class="space-y-6">
+              <div class="legacy-card p-4">
+                  <h2 class="font-bold border-b border-gray-400 mb-2 flex items-center justify-between">
+                      <span class="flex items-center gap-2"><span class="material-icons text-blue-600">account_balance</span> 入金管理</span>
+                      <button @click="openDepositModal()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-blue-700">新規登録</button>
+                  </h2>
+                  <div class="overflow-x-auto">
+                      <table class="grid-legacy">
+                          <thead><tr><th>入金日</th><th>取引先</th><th>工事名</th><th>種別</th><th class="text-right">金額</th><th>ステータス</th><th>操作</th></tr></thead>
+                          <tbody>
+                              <tr v-for="d in deposits" :key="d.id">
+                                  <td class="text-center text-xs">{{ d.date }}</td>
+                                  <td class="font-bold">{{ d.client }}</td>
+                                  <td class="text-center truncate max-w-[120px]">{{ d.project }}</td>
+                                  <td class="text-center text-xs">{{ d.type }}</td>
+                                  <td class="text-right font-mono">{{ formatCurrency(d.amount) }}</td>
+                                  <td class="text-center"><span :class="d.status==='取消'?'bg-gray-200':'bg-green-100 text-green-800'" class="px-1 rounded text-xs">{{ d.status }}</span></td>
+                                  <td class="text-center">
+                                      <button v-if="d.status!=='取消'" @click="openDepositModal(d)" class="bg-yellow-400 border border-yellow-600 px-2 text-xs mr-1">編集</button>
+                                  </td>
+                              </tr>
+                          </tbody>
+                      </table>
+                      <div v-if="deposits.length===0" class="text-center py-8 text-gray-500">入金データがありません</div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- 出金管理タブ -->
+          <div v-if="adminSubTab === 'payments'" class="space-y-6">
+              <div class="legacy-card p-4">
+                  <h2 class="font-bold border-b border-gray-400 mb-2 flex items-center justify-between">
+                      <span class="flex items-center gap-2"><span class="material-icons text-red-600">payments</span> 出金管理</span>
+                      <button @click="openPaymentModal()" class="bg-red-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-red-700">新規登録</button>
+                  </h2>
+                  <div class="overflow-x-auto">
+                      <table class="grid-legacy">
+                          <thead><tr><th>出金日</th><th>支払先</th><th>工事名</th><th>種別</th><th class="text-right">金額</th><th>ステータス</th><th>操作</th></tr></thead>
+                          <tbody>
+                              <tr v-for="p in payments" :key="p.id">
+                                  <td class="text-center text-xs">{{ p.date }}</td>
+                                  <td class="font-bold">{{ p.supplier }}</td>
+                                  <td class="text-center truncate max-w-[120px]">{{ p.project }}</td>
+                                  <td class="text-center text-xs">{{ p.type }}</td>
+                                  <td class="text-right font-mono">{{ formatCurrency(p.amount) }}</td>
+                                  <td class="text-center"><span :class="p.status==='取消'?'bg-gray-200':'bg-green-100 text-green-800'" class="px-1 rounded text-xs">{{ p.status }}</span></td>
+                                  <td class="text-center">
+                                      <button v-if="p.status!=='取消'" @click="openPaymentModal(p)" class="bg-yellow-400 border border-yellow-600 px-2 text-xs mr-1">編集</button>
+                                  </td>
+                              </tr>
+                          </tbody>
+                      </table>
+                      <div v-if="payments.length===0" class="text-center py-8 text-gray-500">出金データがありません</div>
+                  </div>
+              </div>
           </div>
         </div>
       </div>
@@ -1407,6 +1517,14 @@ window.__script2Ran = true;
             const previewData = reactive({ headers: [], rows: [] });
             const journalIncludeSales = ref(false); 
             const journalIncludePurchases = ref(true);
+            
+            // 入出金管理用
+            const deposits = ref([]);
+            const payments = ref([]);
+            const depositForm = reactive({ id: "", date: "", estimateId: "", client: "", project: "", type: "振込", amount: 0, fee: 0, offset: 0, remarks: "", status: "確認済" });
+            const paymentForm = reactive({ id: "", date: "", orderId: "", invoiceId: "", supplier: "", project: "", type: "振込", amount: 0, fee: 0, offset: 0, remarks: "", status: "確認済" });
+            const showDepositModal = ref(false);
+            const showPaymentModal = ref(false);
             
             // サジェスト用 (旧)
             const activeSuggestionIdx = ref(null);
@@ -2565,6 +2683,39 @@ window.__script2Ran = true;
             const showPreview = async () => { loadingMessage.value = '読込中'; loading.value = true; try { const res = JSON.parse(await gas('apiPreviewJournalData', journalYear.value, journalMonth.value, journalIncludeSales.value, journalIncludePurchases.value)); previewData.headers = res.headers; previewData.rows = res.rows; showPreviewModal.value = true; } finally { loading.value = false; } };
             const downloadJournalCsv = async () => { loadingMessage.value = '読込中'; loading.value = true; try { const res = JSON.parse(await gas('apiGenerateJournalData', journalYear.value, journalMonth.value, journalIncludeSales.value, journalIncludePurchases.value)); if(res.success) { const a = document.createElement('a'); a.href = "data:text/csv;base64," + res.data; a.download = res.filename; a.click(); } } finally { loading.value = false; } };
 
+            const fetchDeposits = async () => { loading.value = true; try { const res = await gas('apiGetDeposits'); deposits.value = JSON.parse(res); } catch(e) { deposits.value = []; notify("入金データの取得に失敗しました", "error"); } finally { loading.value = false; } };
+            const fetchPayments = async () => { loading.value = true; try { const res = await gas('apiGetPayments'); payments.value = JSON.parse(res); } catch(e) { payments.value = []; notify("出金データの取得に失敗しました", "error"); } finally { loading.value = false; } };
+            const openDepositModal = (d) => {
+                const today = new Date().toISOString().slice(0,10);
+                if (d) { Object.assign(depositForm, { id: d.id, date: d.date ? new Date(d.date).toISOString().slice(0,10) : today, estimateId: d.estimateId || "", client: d.client, project: d.project || "", type: d.type || "振込", amount: d.amount || 0, fee: d.fee || 0, offset: d.offset || 0, remarks: d.remarks || "", status: d.status || "確認済" }); }
+                else { Object.assign(depositForm, { id: "", date: today, estimateId: "", client: "", project: "", type: "振込", amount: 0, fee: 0, offset: 0, remarks: "", status: "確認済" }); }
+                showDepositModal.value = true;
+            };
+            const openPaymentModal = (p) => {
+                const today = new Date().toISOString().slice(0,10);
+                if (p) { Object.assign(paymentForm, { id: p.id, date: p.date ? new Date(p.date).toISOString().slice(0,10) : today, orderId: p.orderId || "", invoiceId: p.invoiceId || "", supplier: p.supplier, project: p.project || "", type: p.type || "振込", amount: p.amount || 0, fee: p.fee || 0, offset: p.offset || 0, remarks: p.remarks || "", status: p.status || "確認済" }); }
+                else { Object.assign(paymentForm, { id: "", date: today, orderId: "", invoiceId: "", supplier: "", project: "", type: "振込", amount: 0, fee: 0, offset: 0, remarks: "", status: "確認済" }); }
+                showPaymentModal.value = true;
+            };
+            const saveDeposit = async () => {
+                if (!(depositForm.client || "").trim()) return notify("取引先名を入力してください", "error");
+                if (!(depositForm.amount || 0)) return notify("入金金額を入力してください", "error");
+                loading.value = true; try {
+                    const res = JSON.parse(await gas('apiSaveDeposit', JSON.stringify(depositForm)));
+                    if (res.success) { notify("入金情報を保存しました"); showDepositModal.value = false; await fetchDeposits(); }
+                    else notify(res.message || "保存に失敗しました", "error");
+                } catch(e) { notify("保存エラー: " + (e.message||e), "error"); } finally { loading.value = false; }
+            };
+            const savePayment = async () => {
+                if (!(paymentForm.supplier || "").trim()) return notify("支払先名を入力してください", "error");
+                if (!(paymentForm.amount || 0)) return notify("出金金額を入力してください", "error");
+                loading.value = true; try {
+                    const res = JSON.parse(await gas('apiSavePayment', JSON.stringify(paymentForm)));
+                    if (res.success) { notify("出金情報を保存しました"); showPaymentModal.value = false; await fetchPayments(); }
+                    else notify(res.message || "保存に失敗しました", "error");
+                } catch(e) { notify("保存エラー: " + (e.message||e), "error"); } finally { loading.value = false; }
+            };
+
             const reprintOrderPdf = async (orderId) => {
                 if(!await confirmAction("この発注書のPDFを再発行しますか？")) return;
                 loading.value = true;
@@ -2588,6 +2739,7 @@ window.__script2Ran = true;
                 loading, loadingMessage, currentTab, userEmail, auth, masters, projects, orders, adminInvoices, isReviewMode, showBackButton, isDirty,
                 invoiceFiles, selectedInvoiceFile, isAnalyzing, invoiceForm, activeProjects, orderBalance,
                 journalYear, journalMonth, journalYears, showPreviewModal, previewData, journalIncludeSales, journalIncludePurchases,
+                deposits, payments, depositForm, paymentForm, showDepositModal, showPaymentModal, fetchDeposits, fetchPayments, openDepositModal, openPaymentModal, saveDeposit, savePayment,
                 activeSuggestionIdx, filteredSuggestions, showSidePanel, clientHistory,
                 showLedgerModal, ledgerData, adminSubTab, analysisYear, analysisData, analysisTotalSales, analysisTotalProfit,
                 notifications, confirmState, form, filter, 
