@@ -39,7 +39,7 @@
     .logo-img { max-height: 50px; vertical-align: middle; margin-right: 10px; }
     
     .details-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-    .details-table th, .details-table td { border: 1px solid #333; padding: 3px 5px; }
+    .details-table th, .details-table td { border: 1px solid #333; padding: 3px 5px; height: 18px; }
     .header-cell { background-color: #e5e7eb; font-weight: bold; text-align: center; }
     .row-summary { background-color: #f9fafb; font-weight: bold; }
     .border-none { border: none !important; background: none !important; }
@@ -107,7 +107,7 @@
           <td class="text-right"><?= Number(item.cost).toLocaleString() ?></td>
           <td class="text-right"><?= Number(item.amount).toLocaleString() ?></td>
           <? } else { ?>
-          <td><br></td><td></td><td></td><td></td><td></td><td></td>
+          <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
           <? } ?>
         </tr>
       <? }); ?>

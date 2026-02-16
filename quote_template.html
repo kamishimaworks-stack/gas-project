@@ -54,7 +54,7 @@
         .total-box { border-top: 2px solid #333; border-bottom: 2px solid #333; padding: 6px; text-align: center; margin: 10px 0; font-size: 16pt; font-weight: bold; background: #f9f9f9; }
         
         .details-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-        .details-table td { border: 1px solid #333; padding: 3px 5px; height: auto; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.3; }
+        .details-table td { border: 1px solid #333; padding: 3px 5px; height: 18px; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.3; }
         .header-cell { background-color: #e5e7eb; font-weight: bold; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -136,7 +136,7 @@
                         <td class="text-right"><?= items[i].price ? Number(items[i].price).toLocaleString() : '' ?></td>
                         <td class="text-right"><?= items[i].amount ? Number(items[i].amount).toLocaleString() : '' ?></td>
                     <? } else { ?>
-                        <td><br></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td>
                     <? } ?>
                 </tr>
                 <? } ?>
