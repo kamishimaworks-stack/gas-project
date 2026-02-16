@@ -1432,6 +1432,51 @@
       </div>
     </main>
 
+    <!-- AIチャットボット -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 4000; display: flex; flex-direction: column; align-items: end;">
+      
+      <transition name="modal">
+        <div v-if="showChatBot" class="bg-white border border-gray-400 shadow-2xl rounded-lg mb-4 flex flex-col" style="width: 500px; height: 650px; max-height: calc(100vh - 120px); overflow: hidden;">
+          <div class="bg-purple-700 text-white p-3 font-bold flex justify-between items-center shadow-sm">
+            <span class="flex items-center gap-1"><span class="material-icons text-sm">psychology</span>システム解説AI</span>
+            <button @click="showChatBot=false" class="text-white hover:text-purple-200 font-bold text-2xl w-10 h-10 flex items-center justify-center rounded hover:bg-white/20 transition-colors" title="閉じる">×</button>
+          </div>
+          
+          <div class="flex-1 min-h-0 p-3 overflow-y-auto bg-gray-50 text-sm space-y-3" id="chat-history">
+            <div v-for="(msg, i) in chatMessages" :key="i" :class="msg.role === 'user' ? 'text-right' : 'text-left'">
+              <div :class="msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 text-gray-800'" 
+                   class="inline-block px-3 py-2 rounded-lg max-w-[90%] whitespace-pre-wrap shadow-sm text-left leading-relaxed">
+                <span v-if="msg.role==='ai'" class="font-bold text-purple-700 block mb-1 text-[10px]">AI</span>
+                {{ msg.text }}
+              </div>
+            </div>
+            <div v-if="isChatThinking" class="flex justify-start">
+               <div class="bg-white border border-gray-300 px-3 py-2 rounded-lg text-gray-500 text-[10px] animate-pulse">
+                 考え中...
+               </div>
+            </div>
+          </div>
+          
+          <div class="p-2 border-t bg-gray-100">
+            <div class="flex gap-2">
+              <input v-model="chatInput" @keydown.enter="!isChatThinking && sendChatMessage()" :disabled="isChatThinking" 
+                     class="flex-1 border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-purple-500" 
+                     placeholder="例: 見積書PDFの出し方は？">
+              <button @click="sendChatMessage" :disabled="isChatThinking || !chatInput" 
+                      class="bg-purple-600 text-white px-3 py-1 rounded shadow hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                <span class="material-icons text-sm">send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <button @click="showChatBot = !showChatBot" 
+              class="bg-purple-700 text-white w-14 h-14 rounded-full shadow-lg hover:bg-purple-800 transition transform hover:scale-110 flex items-center justify-center border-2 border-white">
+        <span class="material-icons" style="font-size: 28px;">support_agent</span>
+      </button>
+    </div>
+
     <div v-if="currentTab === 'edit'" class="function-bar">
       <div class="f-btn" @click="createPdf"><span class="material-icons f-icon text-blue-600">print</span>見積PDF</div>
       
@@ -1835,6 +1880,14 @@ window.__script2Ran = true;
             // 業者選択モーダル用
             const showVendorSelectModal = ref(false);
             const vendorCandidates = ref([]);
+            
+            // --- AIチャットボット用データ ---
+            const showChatBot = ref(false);
+            const chatInput = ref("");
+            const chatMessages = ref([
+                { role: 'ai', text: 'こんにちは!\nシステムの操作方法や、コードの仕組みについて何でも聞いてください。' }
+            ]);
+            const isChatThinking = ref(false);
             
             // サイドパネル用
             const sidePanelMode = ref(null); // 'history' | 'order' | null
@@ -2921,6 +2974,41 @@ window.__script2Ran = true;
                 }
             };
 
+            // --- AIチャットボット送信処理 ---
+            const sendChatMessage = async () => {
+                const text = chatInput.value.trim();
+                if (!text) return;
+                
+                // ユーザーのメッセージを追加
+                chatMessages.value.push({ role: 'user', text: text });
+                chatInput.value = "";
+                isChatThinking.value = true;
+                
+                // 最下部へスクロール
+                await nextTick();
+                const container = document.getElementById('chat-history');
+                if(container) container.scrollTop = container.scrollHeight;
+
+                try {
+                    // GAS (コード.js) の apiChatWithSystemBot を呼び出し
+                    const resJson = await gas('apiChatWithSystemBot', text);
+                    const res = JSON.parse(resJson);
+                    
+                    if (res.error) {
+                        chatMessages.value.push({ role: 'ai', text: "エラーが発生しました:\n" + res.error });
+                    } else {
+                        chatMessages.value.push({ role: 'ai', text: res.reply });
+                    }
+                } catch (e) {
+                    console.error(e);
+                    chatMessages.value.push({ role: 'ai', text: "通信エラーが発生しました。ネットワークを確認してください。" });
+                } finally {
+                    isChatThinking.value = false;
+                    await nextTick();
+                    if(container) container.scrollTop = container.scrollHeight;
+                }
+            };
+
             return {
                 loading, loadingMessage, currentTab, userEmail, auth, masters, projects, orders, adminInvoices, isReviewMode, showBackButton, isDirty,
                 invoiceFiles, selectedInvoiceFile, isAnalyzing, invoiceForm, activeProjects, orderBalance,
@@ -2931,6 +3019,7 @@ window.__script2Ran = true;
                 notifications, confirmState, form, filter, listSubTab, orderListFilter, orderListVendors, orderListYears, filteredOrderList,
                 showOcrModal, ocrFiles, isOcrLoading, selectedOcrFiles, showDraftModal, drafts, isDraftLoading, estimateCandidates,
                 showVendorSelectModal, vendorCandidates,
+                showChatBot, chatInput, chatMessages, isChatThinking, sendChatMessage,
                 sidePanelMode, historyList, orderInPanel, toggleSidePanel, closeSidePanel, handleEstimateRowClick, saveOrderFromPanel, createOrderPdfFromPanel, orderPanelTab, editingOrderInPanel, currentEstimateOrders, reprintOrderPdf, openOrderForEdit, closeOrderEdit, calcEditedOrderLine, addEditOrderItem, removeEditOrderItem, saveEditedOrderFromPanel,
                 saveConfirmState,
                 unifiedProducts, setMasters, searchMasterKeyword, searchSetKeyword, leftPanelMode, activeLeftPanelRow, filteredMasters, filteredSets, openLeftPanel, closeLeftPanel, applyMasterItem, applySetItem,

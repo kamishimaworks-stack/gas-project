@@ -1354,7 +1354,7 @@ function _parseInvoiceImageWithGemini(file) {
       "amount": { "type": "NUMBER" }, "content": { "type": "STRING" }, "registrationNumber": { "type": "STRING", "description": "T+13 digits" }
     }
   };
-  const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.API_KEY}`, {
+  const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${CONFIG.API_KEY}`, {
     method: "post", contentType: "application/json",
     payload: JSON.stringify({ contents: [{ parts }], generationConfig: { response_mime_type: "application/json", response_schema: responseSchema } }),
     muteHttpExceptions: true
@@ -1877,7 +1877,7 @@ function apiPredictUnitPrice(product, spec) {
   const context = historyLines.join("\n");
   const prompt = `あなたは建築積算のプロです。以下の過去実績を参考に、新しい項目の適正単価(数値のみ)を予測してください。\n【過去実績】\n${context}\n【対象】\n品名: ${product}\n仕様: ${spec}\n回答は数値(円)のみ。予測不能なら0。`;
   try {
-    const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.API_KEY}`, {
+    const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${CONFIG.API_KEY}`, {
       method: "post", contentType: "application/json", payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }), muteHttpExceptions: true
     });
     const json = JSON.parse(res.getContentText());
@@ -2106,4 +2106,99 @@ function apiBatchInit() {
   results.auth = apiGetAuthStatus();
   results.masters = apiGetMasters();
   return JSON.stringify(results);
+}
+
+// ==========================================
+// AIチャットボット機能 (System Expert Bot)
+// ==========================================
+
+/**
+ * AIチャットボットAPI
+ * 知識ファイルを読み込み、ユーザーの質問に対する回答を生成します。
+ * @param {string} userMessage - ユーザーからの質問
+ * @return {string} JSON形式の回答 { reply: "...", error: "..." }
+ */
+function apiChatWithSystemBot(userMessage) {
+  // APIキーの確認
+  if (!CONFIG.API_KEY) {
+    return JSON.stringify({ error: "APIキーが設定されていません。管理者に連絡してください。" });
+  }
+
+  try {
+    // 1. 知識ファイル取得
+    const props = PropertiesService.getScriptProperties();
+    const knowledgeFileId = props.getProperty('system_knowledge');
+    
+    if (!knowledgeFileId) {
+      return JSON.stringify({ error: "知識ファイルIDが設定されていません。管理者に連絡してください。" });
+    }
+
+    const knowledgeFile = DriveApp.getFileById(knowledgeFileId);
+    const systemContext = knowledgeFile.getBlob().getDataAsString();
+
+    // 2. プロンプトの構築
+    const promptText = `
+あなたは「AI建築見積システム」の操作サポート専門アシスタントです。
+以下の【システム情報】を基に、ユーザーからの質問に答えてください。
+
+■回答ルール
+1. 操作方法の質問には、具体的なボタン名や画面上の場所、手順を簡潔に案内してください
+2. 技術的な仕組みや実装の詳細は、明示的に聞かれた場合のみ説明してください
+3. 回答は以下の形式で統一してください：
+   - マークダウン記号（**、##、###など）は使わない
+   - 箇条書きは「・」を使用
+   - 手順は「1. 」「2. 」のように番号付き
+   - 適度な改行で読みやすく整形
+   - シンプルで分かりやすい日本語
+
+■制約事項
+・【システム情報】に記載されていないことは「わかりません」と答えてください
+・回答は日本語のみで行ってください
+
+【システム情報】
+${systemContext}
+
+【ユーザーの質問】
+${userMessage}
+`;
+
+    // 3. Gemini APIへのリクエスト
+    const payload = {
+      contents: [{ parts: [{ text: promptText }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2000
+      }
+    };
+
+    const res = UrlFetchApp.fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${CONFIG.API_KEY}`,
+      {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      }
+    );
+
+    const json = JSON.parse(res.getContentText());
+    
+    // エラーハンドリング
+    if (json.error) {
+      console.error("Gemini API Error: " + JSON.stringify(json.error));
+      return JSON.stringify({ error: "AIの応答エラー: " + json.error.message });
+    }
+    
+    // 回答の抽出
+    const reply = json.candidates && json.candidates[0].content.parts[0].text;
+    if (!reply) {
+      return JSON.stringify({ error: "回答を生成できませんでした。" });
+    }
+
+    return JSON.stringify({ reply: reply });
+
+  } catch (e) {
+    console.error("apiChatWithSystemBot Exception: " + e.toString());
+    return JSON.stringify({ error: "システムエラーが発生しました: " + e.toString() });
+  }
 }
