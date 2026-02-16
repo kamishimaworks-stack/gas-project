@@ -358,8 +358,15 @@ function apiGetUnifiedProducts() {
   }
   const sSheet = ss.getSheetByName(CONFIG.sheetNames.masterSet);
   if (sSheet && sSheet.getLastRow() > 1) {
-    sSheet.getRange(2, 1, sSheet.getLastRow()-1, 7).getValues().forEach(r => {
-      if(r[2]) add({ category: r[1], product: r[2], spec: r[3], unit: r[5], price: parseCurrency(r[6]) }, "セット");
+    sSheet.getRange(2, 1, sSheet.getLastRow()-1, 8).getValues().forEach(r => {
+      if(r[2]) {
+        const rawPrice = parseCurrency(r[6]);
+        const rawAmount = parseCurrency(r[7]);
+        const qty = Number(r[4]) || 0;
+        // 単価が空欄で金額だけ記載されている場合、金額÷数量を単価とする
+        const price = rawPrice > 0 ? rawPrice : (qty > 0 && rawAmount > 0 ? Math.round(rawAmount / qty) : 0);
+        add({ category: r[1], product: r[2], spec: r[3], unit: r[5], price: price }, "セット");
+      }
     });
   }
   const lSheet = ss.getSheetByName(CONFIG.sheetNames.list);
@@ -398,7 +405,13 @@ function apiSearchSets(keyword) {
           if (!setMap.has(setName)) setMap.set(setName, { name: setName, firstItem: r[2], totalPrice: 0, count: 0 });
           const current = setMap.get(setName);
           current.count++;
-          current.totalPrice += (Number(r[6]) || 0) * (Number(r[4]) || 0);
+          // 単価が空でも金額があればそれを使って合計を計算
+          const rawPrice = parseCurrency(r[6]);
+          const rawAmount = parseCurrency(r[7]);
+          const qty = parseCurrency(r[4]);
+          // 金額が記載されていればそのまま使用、なければ単価×数量
+          const lineAmount = rawAmount > 0 ? rawAmount : (rawPrice * qty);
+          current.totalPrice += lineAmount;
       }
   });
   const result = Array.from(setMap.values()).filter(s => (s.totalPrice || 0) > 0);
@@ -410,9 +423,17 @@ function apiGetSetDetails(setName) {
   const sheet = ss.getSheetByName(CONFIG.sheetNames.masterSet);
   if (!sheet) return JSON.stringify([]);
   const data = sheet.getDataRange().getValues().slice(1);
-  const items = data.filter(r => r[0] === setName).map(r => ({
-      category: r[1], product: r[2], spec: r[3], qty: Number(r[4]) || 0, unit: r[5], price: Number(r[6]) || 0, amount: Number(r[7]) || 0, remarks: r[8] || ""
-    }));
+  const items = data.filter(r => r[0] === setName).map(r => {
+      const rawPrice = Number(r[6]) || 0;
+      const rawAmount = Number(r[7]) || 0;
+      const qty = Number(r[4]) || 0;
+      // 単価が空欄で金額だけ記載されている場合、金額÷数量を単価とする
+      const price = rawPrice > 0 ? rawPrice : (qty > 0 && rawAmount > 0 ? Math.round(rawAmount / qty) : 0);
+      const amount = rawAmount > 0 ? rawAmount : Math.round(qty * price);
+      return {
+        category: r[1], product: r[2], spec: r[3], qty: qty, unit: r[5], price: price, amount: amount, remarks: r[8] || ""
+      };
+    });
   return JSON.stringify(items);
 }
 
