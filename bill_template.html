@@ -118,45 +118,6 @@
         </div>
     </div>
     <? } ?>
-    <table class="flex-container">
-        <tr>
-            <td style="width: 55%;">
-                <div class="customer-name"><?= client ?> 御中</div>
-                <div class="project-name">件名：<?= project ?></div>
-                <div style="margin-top:20px;">
-                   下記のとおりご請求申し上げます。<br>
-                   お振込期限：<?= payment || '翌月末' ?>
-                </div>
-            </td>
-            <td style="width: 45%; text-align: right;">
-                <div class="company-block">
-                    <table class="stamp-table">
-                        <tr class="stamp-header"><td>検 印</td><td>検 印</td><td>作成者</td></tr>
-                        <tr class="stamp-body"><td></td><td></td><td></td></tr>
-                    </table>
-                    <div style="margin-bottom: 5px;">
-                        請求日: <?= date ?><br>
-                        No: <?= id ?>
-                    </div>
-                    <div class="company-info">
-                        <div class="license-info">愛知県知事許可（般-6）第64964号</div>
-                        <div style="display:flex; align-items:center;">
-                            <img src="<?!= include("logo") ?>" class="logo-img" onerror="this.style.display='none'">
-                            <div class="company-name">琉希工業株式会社</div>
-                        </div>
-                        <div>代表取締役　　足立　祐希</div>
-                        <div>〒444-0204</div>
-                        <div>岡崎市国正町字上川田44番地</div>
-                        <div>TEL (0564) 64-0721(代)</div>
-                        <div>FAX (0564) 64-0725</div>
-                        <div style="margin-top:5px; font-weight:bold;">適格請求書発行事業者登録番号: T0000000000000</div>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    </table>
-    <div class="total-box">御請求金額： <?= total ?> <small>(税込)</small></div>
-    <? } ?>
 
     <div class="details-section">
         <table class="details-table">

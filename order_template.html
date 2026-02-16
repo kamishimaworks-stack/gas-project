@@ -52,6 +52,7 @@
   <? for(var p = 0; p < data.pages.length; p++) { var items = data.pages[p]; ?>
   <? if (p > 0) { ?><div class="page-break"></div><? } ?>
   
+  <? if (p === 0) { ?>
   <div class="page-header"><span class="main-title">注 文 書</span></div>
   
   <table class="flex-container">
@@ -93,6 +94,12 @@
       </td>
     </tr>
   </table>
+  <? } else { ?>
+  <div style="border-bottom: 1px solid #333; margin-bottom: 10px; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:flex-end;">
+      <div><span style="font-weight: bold;">注文書 - <?= data.header.vendor ?> 御中 (続き)</span></div>
+      <div style="font-size: 9pt; text-align: right;">No: <?= data.header.id ?></div>
+  </div>
+  <? } ?>
 
   <table class="details-table">
     <thead><tr><th class="header-cell">品名</th><th class="header-cell">仕様</th><th class="header-cell">数量</th><th class="header-cell">単位</th><th class="header-cell">単価</th><th class="header-cell">金額</th></tr></thead>

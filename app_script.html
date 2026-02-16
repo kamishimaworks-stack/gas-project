@@ -154,9 +154,10 @@
             let salesChartInstance = null;
             
             // Notification State & Helper
+            let _notifyId = 0;
             const notifications = ref([]);
             const notify = (msg, type='success') => {
-                const id = Date.now();
+                const id = ++_notifyId;
                 notifications.value.push({ id, message: msg, type });
                 setTimeout(() => {
                     const idx = notifications.value.findIndex(n => n.id === id);
@@ -285,8 +286,8 @@
                     const res = await gas('apiSaveOrderOnly', payload);
                     const r = JSON.parse(res);
                     if(r.success) {
-                        notify("保存しました");
-                        dedicatedOrderForm.items = []; // クリア
+                        dedicatedOrderForm.header.id = r.id;
+                        notify("保存しました (ID: " + r.id + ")");
                         isDirty.value = false;
                     } else {
                         notify("保存失敗: " + r.message, "error");
