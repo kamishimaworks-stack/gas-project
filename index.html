@@ -164,6 +164,8 @@
     .master-item { padding: 6px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 11px; }
     .master-item:hover { background-color: #e0f2f1; }
     .master-category { font-weight: bold; color: #00695c; margin-right: 4px; font-size: 10px; }
+    
+    /* 発注先カスタムドロップダウン */
   </style>
   
   <script>
@@ -581,7 +583,7 @@
                   </div>
                   
                   <div class="p-2 border-b bg-white">
-                    <input v-if="leftPanelMode === 'price'" v-model="searchMasterKeyword" @input="(e)=>{fetch('http://127.0.0.1:7242/ingest/cf251808-2a3e-4f12-be84-e0c33a422a0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:576',message:'search input change',data:{value:e.target.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});}" class="w-full border p-1 text-xs" placeholder="品名・仕様で検索...">
+                    <input v-if="leftPanelMode === 'price'" v-model="searchMasterKeyword" @input="(e)=>{fetch('http://127.0.0.1:7242/ingest/cf251808-2a3e-4f12-be84-e0c33a422a0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:576',message:'search input change',data:{value:e.target.value},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});}" class="w-full border p-1 text-xs" placeholder="品名・工種・企業名・基本など スペースでAND検索">
                     <input v-if="leftPanelMode === 'set'" v-model="searchSetKeyword" class="w-full border p-1 text-xs" placeholder="セット名で検索...">
                   </div>
 
@@ -773,18 +775,18 @@
                                 <div class="grid grid-cols-2 gap-2 mb-1">
                                     <div>
                                         <label class="block text-[9px] text-gray-500">発注先</label>
-                                        <input v-model.lazy="item.vendor" @change="syncItemToEstimate(item)" list="vl" class="border p-1 w-full text-xs" placeholder="業者を選択">
+                                        <input v-model.lazy="item.vendor" list="vl" class="border p-1 w-full text-xs" placeholder="業者を選択">
                                     </div>
                                     <div>
                                         <label class="block text-[9px] text-gray-500">原価単価</label>
-                                        <input v-model.lazy="item.cost" @change="syncItemToEstimate(item)" type="number" class="border p-1 w-full text-right" placeholder="単価">
+                                        <input v-model.lazy="item.cost" type="number" class="border p-1 w-full text-right" placeholder="単価">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-2 items-end">
                                     <div>
                                         <label class="block text-[9px] text-gray-500">発注数</label>
                                         <div class="flex items-center">
-                                            <input v-model.lazy="item.qty" @change="syncItemToEstimate(item)" type="number" class="border p-1 w-full text-right">
+                                            <input v-model.lazy="item.qty" type="number" class="border p-1 w-full text-right">
                                             <span class="ml-1 text-[10px]">{{ item.unit }}</span>
                                         </div>
                                     </div>
@@ -826,41 +828,33 @@
                                         <label class="block text-[9px] text-gray-500">発注先</label>
                                         <input v-model="editingOrderInPanel.header.vendor" list="vl" class="border p-1 w-full text-xs">
                                     </div>
-                                    <div v-for="(item, i) in editingOrderInPanel.items" :key="i" class="bg-white p-2 border border-gray-200 rounded mb-2 text-xs">
-                                        <div class="flex justify-between items-center mb-1">
-                                            <span class="font-bold text-gray-700">明細 {{ i + 1 }}</span>
-                                            <button @click="removeEditOrderItem(i)" class="text-gray-400 hover:text-red-500 font-bold">×</button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2 mb-1">
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">品名</label>
-                                                <input v-model="item.product" class="border p-1 w-full">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">仕様</label>
-                                                <input v-model="item.spec" class="border p-1 w-full">
-                                            </div>
-                                        </div>
-                                        <div class="grid grid-cols-4 gap-2">
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">数量</label>
-                                                <input v-model.number="item.qty" @change="calcEditedOrderLine(item)" type="number" class="border p-1 w-full text-right">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">単位</label>
-                                                <input v-model="item.unit" class="border p-1 w-full">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">単価</label>
-                                                <input v-model.number="item.cost" @change="calcEditedOrderLine(item)" type="number" class="border p-1 w-full text-right">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] text-gray-500">金額</label>
-                                                <div class="font-mono font-bold text-orange-800 py-1">{{ formatCurrency(item.amount) }}</div>
-                                            </div>
-                                        </div>
+                                    <div class="overflow-auto border border-gray-300 bg-white rounded">
+                                        <table class="grid-legacy w-full text-xs">
+                                            <thead>
+                                                <tr class="bg-gray-100">
+                                                    <th style="width:30px;"></th>
+                                                    <th>品名</th><th>仕様</th>
+                                                    <th style="width:60px;">数量</th><th style="width:50px;">単位</th>
+                                                    <th style="width:70px;">単価</th><th style="width:80px;">金額</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(item, i) in editingOrderInPanel.items" :key="i" class="hover:bg-orange-50">
+                                                    <td class="text-center cursor-pointer hover:bg-red-200" @click.stop="removeEditOrderItem(i)">×</td>
+                                                    <td><input v-model="item.product" class="border p-1 w-full"></td>
+                                                    <td><input v-model="item.spec" class="border p-1 w-full"></td>
+                                                    <td><input v-model.number="item.qty" @change="calcEditedOrderLine(item)" type="number" class="border p-1 w-full text-right"></td>
+                                                    <td><input v-model="item.unit" class="border p-1 w-full text-center"></td>
+                                                    <td><input v-model.number="item.cost" @change="calcEditedOrderLine(item)" type="number" class="border p-1 w-full text-right"></td>
+                                                    <td class="text-right font-mono font-bold text-orange-800 py-1">{{ formatCurrency(item.amount) }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <button @click="addEditOrderItem" class="w-full py-2 border-t border-dashed border-gray-400 text-gray-500 text-xs hover:bg-gray-50 font-bold">+ 行追加</button>
                                     </div>
-                                    <button @click="addEditOrderItem" class="w-full py-2 border border-dashed border-gray-400 text-gray-500 text-xs hover:bg-gray-50 rounded font-bold">+ 行追加</button>
+                                    <div class="mt-2 text-right font-bold text-sm p-2 bg-orange-50 border border-orange-200 text-orange-900 rounded">
+                                        合計: {{ formatCurrency(editingOrderInPanel.items.reduce((s,i)=>s+(Number(i.amount)||0),0)) }}
+                                    </div>
                                 </div>
                                 <div class="p-2 border-t bg-gray-100 flex gap-2">
                                     <button @click="saveEditedOrderFromPanel" class="flex-1 bg-orange-600 text-white py-2 rounded font-bold text-xs shadow hover:bg-orange-700 flex items-center justify-center gap-1">
@@ -1604,14 +1598,13 @@ window.__script2Ran = true;
                 // 修正: 制限を1000件に緩和して全件表示を可能に
                 if (!kw) return unifiedProducts.value.slice(0, 1000); 
                 try {
-                    // #region agent log
-                    const sampleItems = unifiedProducts.value.slice(0, 3).map(m => ({product: typeof m.product, spec: typeof m.spec, productVal: String(m.product).substring(0,20), specVal: String(m.spec).substring(0,20)}));
-                    fetch('http://127.0.0.1:7242/ingest/cf251808-2a3e-4f12-be84-e0c33a422a0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:1580',message:'filter data types',data:{sampleItems,kw},timestamp:Date.now(),hypothesisId:'F,G'})}).catch(()=>{});
-                    // #endregion
+                    const keywords = kw.split(/\s+/).filter(k => k);
                     const result = unifiedProducts.value.filter(m => {
-                        const p = String(m.product || '');
-                        const s = String(m.spec || '');
-                        return p.toLowerCase().includes(kw) || s.toLowerCase().includes(kw);
+                        const p = String(m.product || '').toLowerCase();
+                        const s = String(m.spec || '').toLowerCase();
+                        const c = String(m.category || '').toLowerCase();
+                        const src = String(m.source || '').toLowerCase();
+                        return keywords.every(k => p.includes(k) || s.includes(k) || c.includes(k) || src.includes(k));
                     }).slice(0, 1000);
                     // #region agent log
                     fetch('http://127.0.0.1:7242/ingest/cf251808-2a3e-4f12-be84-e0c33a422a0c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'index.html:1580',message:'filteredMasters computed end',data:{keyword:kw,resultCount:result.length},timestamp:Date.now(),hypothesisId:'F,G'})}).catch(()=>{});
@@ -1627,7 +1620,7 @@ window.__script2Ran = true;
 
             const filteredSets = computed(() => {
                 const kw = searchSetKeyword.value.toLowerCase().trim();
-                let filtered = setMasters.value.filter(s => s.count > 0);
+                let filtered = setMasters.value.filter(s => s.count > 0 && (s.totalPrice || 0) > 0);
                 if (!kw) return filtered.slice(0, 50);
                 return filtered.filter(s => s.name.toLowerCase().includes(kw)).slice(0, 50);
             });
@@ -1665,7 +1658,7 @@ window.__script2Ran = true;
                     const r = JSON.parse(res);
                     if(r.success) {
                         notify("保存しました");
-                        dedicatedOrderForm.items = []; // クリア
+                        if (r.id) dedicatedOrderForm.header.id = r.id;
                         await fetchOrders();
                         isDirty.value = false;
                     } else {
@@ -1680,13 +1673,21 @@ window.__script2Ran = true;
 
             const createDedicatedOrderPdf = async () => {
                 if(!dedicatedOrderForm.header.vendor) return notify("発注先を入力してください", "error");
+                const validItems = dedicatedOrderForm.items.filter(i => String(i.product || '').trim());
+                if (validItems.length === 0) return notify("明細がありません", "error");
                 loadingMessage.value = '発注書作成中...';
                 loading.value = true;
                 try {
                     const vendor = dedicatedOrderForm.header.vendor;
+                    const itemsWithAmount = validItems.map(i => {
+                        const qty = Number(i.qty) || 0;
+                        const cost = Number(i.cost) || 0;
+                        const amount = Math.round(qty * cost);
+                        return { ...i, vendor, amount };
+                    });
                     const payload = {
                         header: { ...dedicatedOrderForm.header },
-                        items: dedicatedOrderForm.items.map(i => ({ ...i, vendor }))
+                        items: itemsWithAmount
                     };
                     const res = await gas('apiCreateOrderPdf', JSON.stringify(payload), vendor);
                     const r = JSON.parse(res);
@@ -1924,8 +1925,7 @@ window.__script2Ran = true;
             
             // ... (既存メソッド省略なし) ...
             const closeSidePanel = async () => {
-              if (sidePanelMode.value === 'order' && orderInPanel.items.length > 0) {
-                if (!await confirmAction("発注パネルに未保存の明細があります。閉じますか？")) return;
+              if (sidePanelMode.value === 'order') {
                 orderInPanel.items = [];
               }
               closeOrderEdit();
@@ -2012,21 +2012,21 @@ window.__script2Ran = true;
                 orderInPanel.items.splice(i, 1);
             };
 
-            // Phase 3: 明細同期（数量・単価・発注先）
-            const syncItemToEstimate = (oItem) => {
-                if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
-                    const row = form.items[oItem.sourceRowIndex];
-                    row.qty = oItem.qty;
-                    row.cost = oItem.cost;
-                    row.vendor = oItem.vendor || "";
-                    calcLine(row);
-                }
-            };
-            
             const saveOrderFromPanel = async () => {
                 if (orderInPanel.items.length === 0) return notify("明細がありません", "error");
                 const noVendor = orderInPanel.items.filter(i => !(i.vendor || "").trim());
                 if (noVendor.length > 0) return notify("発注先が未入力の項目があります", "error");
+                
+                // 保存前に見積明細に反映
+                orderInPanel.items.forEach(oItem => {
+                    if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
+                        const row = form.items[oItem.sourceRowIndex];
+                        row.vendor = oItem.vendor || "";
+                        row.cost = oItem.cost;
+                        row.qty = oItem.qty;
+                        calcLine(row);
+                    }
+                });
                 
                 let savedEstimate = false;
                 if (!form.header.id || isDirty.value) {
@@ -2095,6 +2095,17 @@ window.__script2Ran = true;
                  if (orderInPanel.items.length === 0) return notify("明細がありません", "error");
                  const noVendor = orderInPanel.items.filter(i => !(i.vendor || "").trim());
                  if (noVendor.length > 0) return notify("発注先が未入力の項目があります", "error");
+                 
+                 // PDF作成前に見積明細に反映（見積保存時に反映される）
+                 orderInPanel.items.forEach(oItem => {
+                     if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
+                         const row = form.items[oItem.sourceRowIndex];
+                         row.vendor = oItem.vendor || "";
+                         row.cost = oItem.cost;
+                         row.qty = oItem.qty;
+                         calcLine(row);
+                     }
+                 });
                  
                  if (!form.header.id || isDirty.value) {
                      const saved = await saveEstimate('public', true);
@@ -2585,7 +2596,7 @@ window.__script2Ran = true;
                 sidePanelMode, historyList, orderInPanel, toggleSidePanel, closeSidePanel, handleEstimateRowClick, saveOrderFromPanel, createOrderPdfFromPanel, orderPanelTab, editingOrderInPanel, currentEstimateOrders, reprintOrderPdf, openOrderForEdit, closeOrderEdit, calcEditedOrderLine, addEditOrderItem, removeEditOrderItem, saveEditedOrderFromPanel,
                 saveConfirmState,
                 unifiedProducts, setMasters, searchMasterKeyword, searchSetKeyword, leftPanelMode, activeLeftPanelRow, filteredMasters, filteredSets, openLeftPanel, closeLeftPanel, applyMasterItem, applySetItem,
-                removeItem, removeOrderItem, syncItemToEstimate,
+                removeItem, removeOrderItem,
                 // Phase 1 Add: 粗利計算
                 calcPanelMargin,
                 // Phase 4 New Returns

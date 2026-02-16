@@ -246,18 +246,22 @@
             // Phase 2: 左パネル用 computed (修正: 表示上限の緩和)
             const filteredMasters = computed(() => {
                 const kw = searchMasterKeyword.value.toLowerCase().trim();
-                // 修正: 制限を1000件に緩和して全件表示を可能に
                 if (!kw) return unifiedProducts.value.slice(0, 1000); 
-                return unifiedProducts.value.filter(m => 
-                    (m.product && m.product.toLowerCase().includes(kw)) || 
-                    (m.spec && m.spec.toLowerCase().includes(kw))
-                ).slice(0, 1000);
+                const keywords = kw.split(/\s+/).filter(k => k);
+                return unifiedProducts.value.filter(m => {
+                    const p = String(m.product || '').toLowerCase();
+                    const s = String(m.spec || '').toLowerCase();
+                    const c = String(m.category || '').toLowerCase();
+                    const src = String(m.source || '').toLowerCase();
+                    return keywords.every(k => p.includes(k) || s.includes(k) || c.includes(k) || src.includes(k));
+                }).slice(0, 1000);
             });
 
             const filteredSets = computed(() => {
                 const kw = searchSetKeyword.value.toLowerCase().trim();
-                if (!kw) return setMasters.value.slice(0, 50);
-                return setMasters.value.filter(s => s.name.toLowerCase().includes(kw)).slice(0, 50);
+                let filtered = setMasters.value.filter(s => s.count > 0 && (s.totalPrice || 0) > 0);
+                if (!kw) return filtered.slice(0, 50);
+                return filtered.filter(s => s.name.toLowerCase().includes(kw)).slice(0, 50);
             });
 
             // Phase 4: 専用発注画面ロジック
@@ -454,6 +458,10 @@
             // ... (既存メソッド省略なし) ...
             const toggleSidePanel = async (mode) => {
               if (sidePanelMode.value === mode) {
+                if (sidePanelMode.value === 'order') {
+                  orderInPanel.items = [];
+                  orderInPanel.vendor = "";
+                }
                 sidePanelMode.value = null; 
               } else {
                 sidePanelMode.value = mode;
@@ -536,29 +544,21 @@
                 orderInPanel.items.splice(i, 1);
             };
 
-            // Phase 3: 業者一括同期
-            const syncVendorToEstimate = () => {
-                const vendor = orderInPanel.vendor;
-                orderInPanel.items.forEach(oItem => {
-                    if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
-                        form.items[oItem.sourceRowIndex].vendor = vendor;
-                    }
-                });
-            };
-
-            // Phase 3: 明細同期（数量・単価）
-            const syncItemToEstimate = (oItem) => {
-                if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
-                    const row = form.items[oItem.sourceRowIndex];
-                    row.qty = oItem.qty;
-                    row.cost = oItem.cost;
-                    calcLine(row); // 見積側の金額再計算
-                }
-            };
-            
             const saveOrderFromPanel = async () => {
                 if (orderInPanel.items.length === 0) return notify("明細がありません", "error");
                 if (!orderInPanel.vendor) return notify("発注先を入力してください", "error");
+                
+                // 保存前に見積明細に反映
+                const vendor = orderInPanel.vendor;
+                orderInPanel.items.forEach(oItem => {
+                    if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
+                        const row = form.items[oItem.sourceRowIndex];
+                        row.vendor = vendor || "";
+                        row.cost = oItem.cost;
+                        row.qty = oItem.qty;
+                        calcLine(row);
+                    }
+                });
                 
                 loading.value = true;
                 try {
@@ -600,6 +600,18 @@
             const createOrderPdfFromPanel = async () => {
                  if (orderInPanel.items.length === 0) return notify("明細がありません", "error");
                  if (!orderInPanel.vendor) return notify("発注先を入力してください", "error");
+                 
+                 // PDF作成前に見積明細に反映（見積保存時に反映される）
+                 const vendor = orderInPanel.vendor;
+                 orderInPanel.items.forEach(oItem => {
+                     if (oItem.sourceRowIndex !== null && form.items[oItem.sourceRowIndex]) {
+                         const row = form.items[oItem.sourceRowIndex];
+                         row.vendor = vendor || "";
+                         row.cost = oItem.cost;
+                         row.qty = oItem.qty;
+                         calcLine(row);
+                     }
+                 });
                  
                  loading.value = true;
                  try {
@@ -950,7 +962,7 @@
                 sidePanelMode, historyList, orderInPanel, toggleSidePanel, handleEstimateRowClick, saveOrderFromPanel, createOrderPdfFromPanel, orderPanelTab, currentEstimateOrders, reprintOrderPdf,
                 saveConfirmState,
                 unifiedProducts, setMasters, searchMasterKeyword, searchSetKeyword, leftPanelMode, activeLeftPanelRow, filteredMasters, filteredSets, openLeftPanel, closeLeftPanel, applyMasterItem, applySetItem,
-                removeItem, removeOrderItem, syncVendorToEstimate, syncItemToEstimate,
+                removeItem, removeOrderItem,
                 // Phase 1 Add: 粗利計算
                 calcPanelMargin,
                 // Phase 4 New Returns

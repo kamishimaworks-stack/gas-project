@@ -370,7 +370,8 @@ function apiSearchSets(keyword) {
           current.totalPrice += (Number(r[6]) || 0) * (Number(r[4]) || 0);
       }
   });
-  return JSON.stringify(Array.from(setMap.values()));
+  const result = Array.from(setMap.values()).filter(s => (s.totalPrice || 0) > 0);
+  return JSON.stringify(result);
 }
 
 function apiGetSetDetails(setName) {
@@ -766,7 +767,7 @@ function apiSaveOrderOnly(jsonData) {
     }
     
     invalidateDataCache_();
-    return JSON.stringify({ success: true, count: orderValues.length });
+    return JSON.stringify({ success: true, id: orderId, count: orderValues.length });
 
   } catch (e) {
     return JSON.stringify({ success: false, message: e.toString() });
@@ -1048,39 +1049,59 @@ function apiReprintOrderPdf(orderId) {
   const headers = data[hIdx];
   const col = {}; headers.forEach((h, i) => { col[String(h).trim()] = i; });
   
-  // データ抽出
+  // データ抽出（apiGetOrderDetailsと同様: 同一orderIdの行はIDが空でも続く）
   const items = [];
   let header = null;
+  let currentId = '';
   
   for(let i=hIdx+1; i<data.length; i++) {
     const row = data[i];
-    if(row[col['ID']] === orderId) {
-      if(!header) {
-        header = {
-          id: row[col['ID']],
-          date: row[col['日付']],
-          vendor: row[col['発注先']],
-          relEstId: row[col['関連見積ID']],
-          location: row[col['納品場所']],
-          remarks: row[col['備考']],
-          honorific: " 御中"
-        };
-      }
-      items.push({
-        product: row[col['品名']],
-        spec: row[col['仕様']],
-        qty: parseCurrency(row[col['数量']]),
-        unit: row[col['単位']],
-        cost: parseCurrency(row[col['単価']]),
-        amount: parseCurrency(row[col['金額']])
-      });
+    const idCell = row[col['ID']];
+    if (idCell && idCell !== 'ID') { currentId = idCell; }
+    if (!currentId || currentId !== orderId) continue;
+    
+    if(!header) {
+      header = {
+        id: orderId,
+        date: row[col['日付']],
+        vendor: row[col['発注先']],
+        relEstId: row[col['関連見積ID']],
+        location: row[col['納品場所']],
+        remarks: row[col['備考']],
+        honorific: " 御中"
+      };
     }
+    items.push({
+      product: row[col['品名']] || '',
+      spec: row[col['仕様']] || '',
+      qty: parseCurrency(row[col['数量']]) || 0,
+      unit: row[col['単位']] || '',
+      cost: parseCurrency(row[col['単価']]) || 0,
+      amount: parseCurrency(row[col['金額']]) || 0
+    });
   }
   
   if(!header) return JSON.stringify({ success: false, message: "指定された発注書が見つかりません" });
   
-  // PDF生成
-  const pdfData = { header: header, items: items, pages: paginateItems(items, 12) };
+  // 関連見積IDがある場合、見積から工事名・工期・決済条件・有効期限を取得
+  if (header.relEstId) {
+    const est = _getEstimateData(header.relEstId);
+    if (est && est.header) {
+      header.project = est.header.project || header.project || "";
+      header.period = est.header.period || "";
+      header.payment = est.header.payment || "";
+      header.expiry = est.header.expiry || "";
+      if (!header.location && est.header.location) header.location = est.header.location;
+    }
+  }
+  if (!header.project) header.project = "";
+  if (!header.period) header.period = "";
+  if (!header.payment) header.payment = "";
+  if (!header.expiry) header.expiry = "";
+  
+  const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  // PDF生成（totalAmountを追加してテンプレートで合計表示）
+  const pdfData = { header: header, items: items, totalAmount: totalAmount, pages: paginateItems(items, 12) };
   
   try {
     let template;
