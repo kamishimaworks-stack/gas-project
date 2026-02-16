@@ -38,6 +38,8 @@ function invalidateDataCache_() {
     c.remove("active_projects_data");
     c.remove("deposits_data");
     c.remove("payments_data");
+    c.remove("masters_data");
+    c.remove("products_data");
     const y = new Date().getFullYear();
     for (let i = y - 2; i <= y + 1; i++) c.remove("analysis_" + i);
   } catch (e) { /* ignore */ }
@@ -118,8 +120,10 @@ function getNextSequenceId(type) {
   const props = PropertiesService.getScriptProperties();
   const key = type === 'estimate' ? 'SEQ_ESTIMATE' : 'SEQ_ORDER';
   const lock = LockService.getScriptLock();
+  let lockAcquired = false;
   try {
-    if (lock.tryLock(5000)) {
+    lockAcquired = lock.tryLock(5000);
+    if (lockAcquired) {
       let current = Number(props.getProperty(key)) || 0;
       current++;
       props.setProperty(key, String(current));
@@ -129,7 +133,7 @@ function getNextSequenceId(type) {
       throw new Error("ID採番タイムアウト");
     }
   } finally {
-    lock.releaseLock();
+    if (lockAcquired) lock.releaseLock();
   }
 }
 
@@ -171,8 +175,14 @@ function deleteRowsById(sheet, targetId) {
   let currentId = "";
   
   for (let i = 1; i < data.length; i++) {
-    const rowId = String(data[i][0]); 
-    if (rowId !== "") currentId = rowId;
+    const rowId = String(data[i][0]).trim(); 
+    if (rowId !== "") {
+      currentId = rowId;
+    } else {
+      // ID列が空行の場合、次にIDが見つかる行まで先読みして判断
+      // 直前のIDが対象外なら、この行はスキップ
+      if (currentId !== targetId) continue;
+    }
     
     if (currentId === targetId) {
       // i=0 is header(row1), so data[i] is row i+1
@@ -682,10 +692,13 @@ function apiSaveUnifiedData(jsonData) {
     if (!orderSheet) { orderSheet = ss.insertSheet(CONFIG.sheetNames.order); checkAndFixOrderHeader(orderSheet); }
     
     const oData = orderSheet.getDataRange().getValues();
+    const oHeaders = oData[0] || [];
+    const relEstIdColIdx = oHeaders.indexOf('関連見積ID');
+    const orderRelEstCol = relEstIdColIdx !== -1 ? relEstIdColIdx : 3;
     const orderRowsToDelete = [];
     if (oData.length > 1) {
         for (let i = 1; i < oData.length; i++) {
-            if (String(oData[i][3]) === saveId) { orderRowsToDelete.push(i + 1); }
+            if (String(oData[i][orderRelEstCol]) === saveId) { orderRowsToDelete.push(i + 1); }
         }
         // Performance Tuning: Use Optimized Delete for Orders too
         if (orderRowsToDelete.length > 0) {
@@ -884,8 +897,8 @@ function apiGetOrders() {
   const col = {}; headers.forEach((h, i) => { col[String(h).trim()] = i; });
 
   const IDX = {
-    id: col["ID"] || 0, date: col["日付"] || 1, vendor: col["発注先"] || 2, relEstId: col["関連見積ID"] || 3,
-    amount: col["金額"] || 10, location: col["納品場所"] || 11, status: col["状態"] || 12, remarks: col["備考"] || 13, visibility: col["公開範囲"] || 15
+    id: col["ID"] !== undefined ? col["ID"] : 0, date: col["日付"] !== undefined ? col["日付"] : 1, vendor: col["発注先"] !== undefined ? col["発注先"] : 2, relEstId: col["関連見積ID"] !== undefined ? col["関連見積ID"] : 3,
+    amount: col["金額"] !== undefined ? col["金額"] : 10, location: col["納品場所"] !== undefined ? col["納品場所"] : 11, status: col["状態"] !== undefined ? col["状態"] : 12, remarks: col["備考"] !== undefined ? col["備考"] : 13, visibility: col["公開範囲"] !== undefined ? col["公開範囲"] : 15
   };
 
   const orderMap = new Map();
@@ -1183,7 +1196,7 @@ function _parseTextInvoice(file) {
   const lines = content.split(/\r\n|\n/);
   const result = { constructionId: "", project: "", supplier: "", amount: 0, content: "", date: "" };
   const keyMap = [
-    { key: "constructionId", keywords: ["工事番号", "ID", "No"] },
+    { key: "constructionId", keywords: ["工事番号", "工事ID", "No"] },
     { key: "project", keywords: ["現場名", "工事名", "案件名", "件名"] },
     { key: "supplier", keywords: ["請求業者", "業者名", "請求元", "会社名"] },
     { key: "amount", keywords: ["金額", "請求金額", "合計", "税込金額"] },
@@ -1347,8 +1360,10 @@ function getNextDepositId_() {
   const props = PropertiesService.getScriptProperties();
   const key = "SEQ_DEPOSIT_" + dateStr;
   const lock = LockService.getScriptLock();
+  let lockAcquired = false;
   try {
-    if (lock.tryLock(5000)) {
+    lockAcquired = lock.tryLock(5000);
+    if (lockAcquired) {
       let current = Number(props.getProperty(key)) || 0;
       current++;
       props.setProperty(key, String(current));
@@ -1356,7 +1371,7 @@ function getNextDepositId_() {
     }
     throw new Error("ID採番タイムアウト");
   } finally {
-    lock.releaseLock();
+    if (lockAcquired) lock.releaseLock();
   }
 }
 
@@ -1366,8 +1381,10 @@ function getNextPaymentId_() {
   const props = PropertiesService.getScriptProperties();
   const key = "SEQ_PAYMENT_" + dateStr;
   const lock = LockService.getScriptLock();
+  let lockAcquired = false;
   try {
-    if (lock.tryLock(5000)) {
+    lockAcquired = lock.tryLock(5000);
+    if (lockAcquired) {
       let current = Number(props.getProperty(key)) || 0;
       current++;
       props.setProperty(key, String(current));
@@ -1375,7 +1392,7 @@ function getNextPaymentId_() {
     }
     throw new Error("ID採番タイムアウト");
   } finally {
-    lock.releaseLock();
+    if (lockAcquired) lock.releaseLock();
   }
 }
 
@@ -1456,7 +1473,7 @@ function apiSaveDeposit(jsonData) {
             data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
             data.remarks || "", data.status || "確認済", email, data.visibility || "public"
           ];
-          sheet.getRange(i + 1, 1, i + 1, rowValues.length).setValues([rowValues]);
+          sheet.getRange(i + 1, 1, 1, rowValues.length).setValues([rowValues]);
           invalidateDataCache_();
           return JSON.stringify({ success: true, id: id });
         }
@@ -1502,7 +1519,7 @@ function apiSavePayment(jsonData) {
             data.type || "振込", Number(data.amount) || 0, Number(data.fee) || 0, Number(data.offset) || 0,
             data.remarks || "", data.status || "確認済", email, data.visibility || "public"
           ];
-          sheet.getRange(i + 1, 1, i + 1, rowValues.length).setValues([rowValues]);
+          sheet.getRange(i + 1, 1, 1, rowValues.length).setValues([rowValues]);
           invalidateDataCache_();
           return JSON.stringify({ success: true, id: id });
         }
@@ -1584,7 +1601,7 @@ function apiPreviewJournalData(year, month, includeSales, includePurchases) {
   const configHeaders = configRaw.slice(1).filter(r => r[0]); 
   const configPurchase = configHeaders.filter(r => r[4] === '仕入' || r[4] === '共通').sort((a, b) => (Number(a[3])||999) - (Number(b[3])||999));
   const configSales = configHeaders.filter(r => r[4] === '売上' || r[4] === '共通').sort((a, b) => (Number(a[3])||999) - (Number(b[3])||999));
-  const targetConfig = includePurchases ? configPurchase : configSales;
+  const targetConfig = (includeSales && includePurchases) ? configSales.concat(configPurchase.filter(c => !configSales.some(s => s[0] === c[0] && s[3] === c[3]))) : (includePurchases ? configPurchase : configSales);
   const headers = targetConfig.map(c => c[0]);
   const rows = [];
   let salesClients = [];
@@ -1767,7 +1784,7 @@ function apiGetAnalysisData(year) {
   const projectMap = {}; // id -> { date, client, totalAmount, totalOrderAmount }
 
   if (listSheet && listSheet.getLastRow() > 1) {
-    const listData = listSheet.getRange(2, 1, listSheet.getLastRow(), 20).getValues();
+    const listData = listSheet.getRange(2, 1, listSheet.getLastRow() - 1, 20).getValues();
     let currentId = "";
     for (let i = 0; i < listData.length; i++) {
       const row = listData[i];
@@ -1890,6 +1907,9 @@ function apiDeleteData(id) {
     if (deleteRowsById(ss.getSheetByName(CONFIG.sheetNames.list), id)) deleted = true;
     if (deleteRowsById(ss.getSheetByName(CONFIG.sheetNames.order), id)) deleted = true;
     if (deleteRowsById(ss.getSheetByName(CONFIG.sheetNames.invoice), id)) deleted = true;
+    if (deleteRowsById(ss.getSheetByName(CONFIG.sheetNames.deposits), id)) deleted = true;
+    if (deleteRowsById(ss.getSheetByName(CONFIG.sheetNames.payments), id)) deleted = true;
+    invalidateDataCache_();
     return JSON.stringify({ success: deleted, message: deleted ? "" : "Not found" });
   } catch (e) { return JSON.stringify({ success: false, message: e.toString() }); } finally { lock.releaseLock(); }
 }
