@@ -1,0 +1,14 @@
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"analyzePage","argsLen":2},"timestamp":1771223342558,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"analyzePage"},"timestamp":1771223387670,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"analyzePage","argsLen":2},"timestamp":1771223388954,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"analyzePage"},"timestamp":1771223506344,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"writeMergedData","argsLen":3},"timestamp":1771223506345,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"writeMergedData"},"timestamp":1771223509256,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"getSelectedCellValues","argsLen":0},"timestamp":1771223527446,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"getSelectedCellValues"},"timestamp":1771223531055,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"getSelectedCellValues","argsLen":0},"timestamp":1771223532844,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"getSelectedCellValues"},"timestamp":1771223534439,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"sortActiveSheetManually","argsLen":2},"timestamp":1771223536727,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"sortActiveSheetManually"},"timestamp":1771223540458,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:call","message":"GAS call","data":{"funcName":"exportSheetToCsv","argsLen":0},"timestamp":1771223543057,"hypothesisId":"H0"}
+{"location":"Sidebar.html:runGoogleScript:success","message":"GAS success","data":{"funcName":"exportSheetToCsv"},"timestamp":1771223545387,"hypothesisId":"H0"}

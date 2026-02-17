@@ -256,3 +256,10 @@
 {"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771215931598}
 {"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771215931600}
 {"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771215932891}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771216201476}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771216201533}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771216201536}
+{"location":"onMounted","message":"auth+masters ok","data":{"len":32072},"hypothesisId":"C","timestamp":1771216203127}
+{"location":"init","message":"Script start","data":{"hasVue":true,"hasCreateApp":true},"hypothesisId":"A","timestamp":1771216293652}
+{"location":"onMounted","message":"onMounted start","data":{},"hypothesisId":"C","timestamp":1771216293697}
+{"location":"mount","message":"app.mount done","data":{},"hypothesisId":"E","timestamp":1771216293699}

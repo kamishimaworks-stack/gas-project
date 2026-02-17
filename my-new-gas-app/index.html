@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- スマホアプリ化のための設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="https://www.gstatic.com/images/branding/product/2x/forms_2020q4_48dp.png">
+  
+  <style>
+    :root {
+      --grid-color: #ff69b4;
+      --header-bg-start: #789bc4;
+      --header-bg-end: #4a6ea9;
+      --text-color: #333;
+      --diff-bg: #fff0f5;
+      --mode-active: #ffd700;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Yu Gothic", sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f5;
+      color: var(--text-color);
+      font-size: 14px;
+      /* iOSのセーフエリア対応 */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ヘッダーエリア */
+    .app-header {
+      background: linear-gradient(to bottom, #6d8dbf, #44669e);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .app-title { font-weight: bold; font-size: 1.1rem; }
+    
+    .btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: white;
+      padding: 6px 12px; /* タップしやすいよう少し大きく */
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    /* モード切替スイッチ */
+    .mode-switcher {
+      display: flex;
+      background: rgba(0,0,0,0.2);
+      border-radius: 20px;
+      padding: 2px;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    
+    .mode-btn {
+      flex: 1;
+      text-align: center;
+      padding: 6px 0;
+      border-radius: 18px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      color: #ddd;
+    }
+    
+    .mode-btn.active {
+      background: white;
+      color: #4a6ea9;
+      font-weight: bold;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* 野帳テーブル */
+    .field-book-container {
+      width: 100%;
+      overflow-x: auto;
+      background: white;
+      padding-bottom: 80px; /* フッターとかぶらないよう広めに */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      min-width: 580px; 
+    }
+
+    th, td {
+      border: 1px solid var(--grid-color);
+      text-align: center;
+      padding: 0;
+      height: 45px; /* 指でタップしやすい高さ */
+      vertical-align: middle;
+      box-sizing: border-box;
+    }
+
+    thead th {
+      background: #f8fcfd;
+      color: black;
+      font-weight: bold;
+      font-size: 0.8rem;
+      border-bottom: 2px solid var(--grid-color);
+      height: 50px;
+      position: sticky;
+      top: 0; 
+      z-index: 10;
+    }
+    
+    .th-label { display: block; font-size: 0.95rem; font-weight: 900; }
+    .th-sub { display: block; font-size: 0.65rem; color: #555; margin-top: 2px;}
+
+    input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      text-align: center;
+      font-size: 1.1rem; /* 数字を見やすく */
+      font-family: monospace;
+      background: transparent;
+      outline: none;
+      padding: 0;
+      border-radius: 0; /* iOSでの丸み除去 */
+      -webkit-appearance: none;
+    }
+    
+    .read-only { background-color: #fafafa; color: #333; font-weight: bold; }
+    
+    /* 列幅 */
+    .col-point { width: 70px; background: #f0f8ff; position: sticky; left: 0; z-index: 20; border-right: 2px solid var(--grid-color); }
+    .col-bs { width: 75px; }
+    .col-ih { width: 80px; }
+    .col-fs { width: 75px; }
+    .col-gh { width: 90px; border-right: 3px double var(--grid-color) !important; }
+    .col-fh { width: 80px; background-color: var(--diff-bg); }
+    .col-diff { width: 80px; background-color: var(--diff-bg); font-weight: bold; }
+
+    /* IH列の表示切替（ワンクリック） */
+    table.ih-hidden .col-ih { display: none !important; }
+    table.ih-hidden { min-width: 100vw; }
+    /* IH非表示時：測点・BS・FS・GHを画面幅いっぱいに大きく、FH・Diffは右側でスクロール表示 */
+    table.ih-hidden .col-point,
+    table.ih-hidden .col-bs,
+    table.ih-hidden .col-fs,
+    table.ih-hidden .col-gh {
+      width: 25vw;
+      min-width: 80px;
+    }
+    table.ih-hidden .col-fh,
+    table.ih-hidden .col-diff {
+      width: 90px;
+    }
+    .btn-ih { min-width: 36px; }
+
+    tr:focus-within { background-color: #eef; }
+
+    .footer-info {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(50, 70, 100, 0.95);
+      color: white;
+      padding: 10px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom)); /* iPhone X以降の下部バー対応 */
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      z-index: 200;
+    }
+    
+    .add-row-btn {
+      margin: 10px;
+      width: calc(100% - 20px);
+      padding: 12px;
+      background: #4a6ea9;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      position: sticky;
+      left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <div class="app-header">
+    <div class="header-top">
+      <div class="btn" onclick="clearAll()">クリア</div>
+      <div class="app-title">器高式野帳</div>
+      <div style="display:flex; gap:6px;">
+        <div id="ihToggleBtn" class="btn btn-ih" onclick="toggleIH()" title="IH列の表示/非表示">IH</div>
+        <div class="btn" onclick="saveData()">保存</div>
+      </div>
+    </div>
+    <!-- モード切替スイッチ -->
+    <div class="mode-switcher">
+      <div id="mode-gh" class="mode-btn active" onclick="switchMode('GH')">地盤高 (m)</div>
+      <div id="mode-rel" class="mode-btn" onclick="switchMode('REL')">プラマイ (mm)</div>
+    </div>
+  </div>
+
+  <!-- 野帳テーブル -->
+  <div class="field-book-container">
+    <table id="levelBook">
+      <thead>
+        <tr>
+          <th class="col-point"><span class="th-sub">測点</span></th>
+          <th class="col-bs"><span class="th-label">BS</span><span class="th-sub">後視 (m)</span></th>
+          <th class="col-ih"><span class="th-label">IH</span><span class="th-sub">器械高 (m)</span></th>
+          <th class="col-fs"><span class="th-label">FS</span><span class="th-sub">前視 (m)</span></th>
+          <th class="col-gh">
+            <span class="th-label">GH</span>
+            <span class="th-sub" id="label-gh-unit">地盤高 (m)</span>
+          </th>
+          <th class="col-fh">
+            <span class="th-label">FH</span>
+            <span class="th-sub" id="label-fh-unit">設計値 (m)</span>
+          </th>
+          <th class="col-diff">
+            <span class="th-label">Diff</span>
+            <span class="th-sub" id="label-diff-unit">差 (m)</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <button class="add-row-btn" onclick="addRow()">＋ 行を追加</button>
+  </div>
+
+  <div class="footer-info">
+    <span id="statusDisplay">Ready</span>
+    <span id="offline-indicator">Auto-Save ON</span>
+  </div>
+
+  <script>
+    const INITIAL_ROWS = 10;
+    const LOCAL_KEY = 'fieldBookData_v1'; // ローカル保存用のキー
+    const IH_VISIBLE_KEY = 'fieldBook_ihVisible';
+    let currentMode = 'GH'; 
+
+    function toggleIH() {
+      const table = document.getElementById('levelBook');
+      const btn = document.getElementById('ihToggleBtn');
+      const isHidden = table.classList.toggle('ih-hidden');
+      const visible = !isHidden;
+      localStorage.setItem(IH_VISIBLE_KEY, visible ? '1' : '0');
+      btn.style.opacity = visible ? '1' : '0.6';
+      btn.textContent = visible ? 'IH' : 'IH';
+    }
+
+    window.onload = function() {
+      // ローカルストレージから復元を試みる
+      const savedData = localStorage.getItem(LOCAL_KEY);
+      
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          currentMode = parsed.mode || 'GH';
+          restoreTable(parsed.rows);
+          switchMode(currentMode, false); // false = don't recalc yet
+        } catch(e) {
+          console.error("復元エラー", e);
+          initEmptyTable();
+        }
+      } else {
+        initEmptyTable();
+      }
+      
+      updateHeaderLabels();
+      // 復元後に一度再計算して整合性を取る
+      recalc();
+      // IH列の表示状態を復元
+      const ihVisible = localStorage.getItem(IH_VISIBLE_KEY);
+      if (ihVisible === '0') {
+        document.getElementById('levelBook').classList.add('ih-hidden');
+        document.getElementById('ihToggleBtn').style.opacity = '0.6';
+      }
+    };
+
+    function initEmptyTable() {
+      for (let i = 0; i < INITIAL_ROWS; i++) addRow();
+    }
+
+    // --- テーブル復元 ---
+    function restoreTable(rowsData) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      rowsData.forEach(rowData => {
+        addRow(rowData);
+      });
+      // データが少ない場合は最低行数まで足す
+      const currentCount = rowsData.length;
+      for (let i = currentCount; i < INITIAL_ROWS; i++) addRow();
+    }
+
+    // --- モード制御 ---
+    function switchMode(mode, doRecalc = true) {
+      currentMode = mode;
+      document.getElementById('mode-gh').classList.toggle('active', mode === 'GH');
+      document.getElementById('mode-rel').classList.toggle('active', mode === 'REL');
+      updateHeaderLabels();
+      if(doRecalc) recalc();
+    }
+
+    function updateHeaderLabels() {
+      if (currentMode === 'GH') {
+        document.getElementById('label-gh-unit').textContent = '地盤高 (m)';
+        document.getElementById('label-fh-unit').textContent = '設計値 (m)';
+        document.getElementById('label-diff-unit').textContent = '差 (m)';
+      } else {
+        document.getElementById('label-gh-unit').textContent = '高さ (mm)';
+        document.getElementById('label-fh-unit').textContent = '設計値 (mm)';
+        document.getElementById('label-diff-unit').textContent = '差 (mm)';
+      }
+    }
+
+    // --- 行操作 ---
+    // valuesオブジェクトがあれば初期値としてセット
+    function addRow(values = null) {
+      const tbody = document.getElementById('tableBody');
+      const tr = document.createElement('tr');
+      
+      const v = values || { point: '', bs: '', fs: '', gh: '', fh: '' };
+
+      tr.innerHTML = `
+        <td class="col-point"><input type="text" class="input-point" value="${v.point || ''}" oninput="saveToLocal()"></td>
+        <td class="col-bs"><input type="number" step="0.001" class="input-bs" value="${v.bs || ''}" oninput="recalc()" placeholder=""></td>
+        <td class="col-ih"><input type="text" class="input-ih read-only" readonly tabindex="-1"></td>
+        <td class="col-fs"><input type="number" step="0.001" class="input-fs" value="${v.fs || ''}" oninput="recalc()" placeholder=""></td>
+        <td class="col-gh"><input type="text" class="input-gh" value="${v.gh || ''}" onchange="onGhChange(this)" placeholder=""></td>
+        <td class="col-fh"><input type="text" class="input-fh" value="${v.fh || ''}" onchange="recalc()" placeholder=""></td>
+        <td class="col-diff"><input type="text" class="input-diff read-only" readonly tabindex="-1"></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function onGhChange(input) {
+      recalc();
+    }
+
+    // --- 計算ロジック & 自動保存 ---
+    function recalc() {
+      const rows = document.querySelectorAll('#tableBody tr');
+      let currentIH_m = null;
+
+      rows.forEach((row) => {
+        const bsInput = row.querySelector('.input-bs');
+        const fsInput = row.querySelector('.input-fs');
+        const ihInput = row.querySelector('.input-ih');
+        const ghInput = row.querySelector('.input-gh');
+        const fhInput = row.querySelector('.input-fh');
+        const diffInput = row.querySelector('.input-diff');
+
+        const bs_m = parseFloat(bsInput.value);
+        const fs_m = parseFloat(fsInput.value);
+        
+        let rawGh = ghInput.value.trim();
+        let gh_m = NaN;
+
+        if (rawGh !== "") {
+          if (currentMode === 'GH') {
+            gh_m = parseFloat(rawGh);
+          } else {
+            gh_m = parseFloat(rawGh) / 1000.0;
+          }
+        }
+
+        // GH計算
+        if (isNaN(gh_m) && currentIH_m !== null && !isNaN(fs_m)) {
+          gh_m = currentIH_m - fs_m;
+          ghInput.value = formatHeight(gh_m, currentMode);
+        }
+
+        // IH計算
+        if (!isNaN(gh_m) && !isNaN(bs_m)) {
+          currentIH_m = gh_m + bs_m;
+          ihInput.value = currentIH_m.toFixed(3);
+        } else {
+          ihInput.value = "";
+        }
+
+        // Diff計算
+        let fh_m = NaN;
+        const rawFh = fhInput.value.trim();
+        if (rawFh !== "") {
+          if (currentMode === 'GH') {
+            fh_m = parseFloat(rawFh);
+          } else {
+            fh_m = parseFloat(rawFh) / 1000.0;
+          }
+        }
+
+        if (!isNaN(gh_m) && !isNaN(fh_m)) {
+          const diff_m = gh_m - fh_m;
+          if (currentMode === 'GH') {
+            diffInput.value = diff_m.toFixed(3);
+            diffInput.style.color = diff_m < 0 ? 'red' : 'black';
+          } else {
+            const diff_mm = Math.round(diff_m * 1000);
+            diffInput.value = (diff_mm > 0 ? "+" : (diff_mm === 0 ? "±" : "")) + diff_mm;
+            diffInput.style.color = diff_mm < 0 ? 'blue' : '#d32f2f';
+          }
+        } else {
+          diffInput.value = "";
+        }
+      });
+      
+      // 計算が終わったら保存
+      saveToLocal();
+    }
+
+    function formatHeight(val_m, mode) {
+      if (isNaN(val_m)) return "";
+      if (mode === 'GH') {
+        return val_m.toFixed(3);
+      } else {
+        const val_mm = Math.round(val_m * 1000);
+        const sign = val_mm > 0 ? "+" : (val_mm === 0 ? "±" : "");
+        return sign + val_mm;
+      }
+    }
+
+    // --- ローカル保存ロジック ---
+    function saveToLocal() {
+      const rows = document.querySelectorAll('#tableBody tr');
+      const rowData = [];
+      
+      rows.forEach(row => {
+        rowData.push({
+          point: row.querySelector('.input-point').value,
+          bs: row.querySelector('.input-bs').value,
+          fs: row.querySelector('.input-fs').value,
+          gh: row.querySelector('.input-gh').value, // 表示されている値を保存
+          fh: row.querySelector('.input-fh').value
+        });
+      });
+      
+      const saveObj = {
+        mode: currentMode,
+        rows: rowData,
+        timestamp: new Date().getTime()
+      };
+      
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(saveObj));
+    }
+
+    // --- サーバー保存 ---
+    function saveData() {
+      if (!navigator.onLine) {
+        alert("現在オフラインです。データは端末に保存されています。電波の良い場所で再度保存ボタンを押してください。");
+        return;
+      }
+
+      const rows = document.querySelectorAll('#tableBody tr');
+      const data = [];
+      const status = document.getElementById('statusDisplay');
+
+      rows.forEach(row => {
+        const point = row.querySelector('.input-point').value;
+        const bs = row.querySelector('.input-bs').value;
+        const ih = row.querySelector('.input-ih').value;
+        const fs = row.querySelector('.input-fs').value;
+        const gh = row.querySelector('.input-gh').value;
+        const fh = row.querySelector('.input-fh').value;
+        const diff = row.querySelector('.input-diff').value;
+
+        if (!point && !bs && !fs && !gh) return;
+
+        data.push([point, bs, ih, fs, gh, fh, diff, currentMode]);
+      });
+
+      if (data.length === 0) {
+        alert("データがありません");
+        return;
+      }
+
+      status.textContent = "送信中...";
+      google.script.run
+        .withSuccessHandler(msg => { 
+          status.textContent = msg; 
+          setTimeout(()=>status.textContent='Ready', 2000); 
+        })
+        .withFailureHandler(err => { 
+          status.textContent = "送信エラー"; 
+          alert("送信に失敗しました。データは端末に残っています。\n" + err); 
+        })
+        .saveAllData(data);
+    }
+    
+    function clearAll() {
+      if(confirm("入力値を全てクリアしますか？\n（保存していないデータは消えます）")) {
+        localStorage.removeItem(LOCAL_KEY);
+        initEmptyTable();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      var pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+      body { padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
+      .header { margin-bottom: 20px; font-weight: bold; font-size: 16px; color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 5px;}
+      .form-group { margin-bottom: 15px; }
+      label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; }
+      
+      input[type="file"] { width: 100%; font-size: 12px; }
+      input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #dadce0; border-radius: 4px; }
+      .note { font-size: 11px; color: #5f6368; margin-top: 4px; }
+
+      /* ツールボックス（事後処理用） */
+      .tools-box { border: 1px solid #1a73e8; padding: 10px; border-radius: 4px; background-color: #f1f8ff; margin-top: 20px; text-align: left; }
+      .tools-title { color: #1a73e8; font-weight: bold; font-size: 13px; margin-bottom: 8px; }
+      .tools-box .tool-btn { box-sizing: border-box; margin-left: 0; margin-right: 0; }
+
+      button.action { background-color: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; transition: background 0.3s; text-align: center; display: flex; align-items: center; justify-content: center; }
+      button.action:hover { background-color: #1557b0; }
+      button.action:disabled { background-color: #dadce0; color: #80868b; cursor: not-allowed; }
+      
+      /* ツールボタン */
+      button.tool-btn { background-color: #fff; color: #1a73e8; border: 1px solid #1a73e8; width: 100%; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; text-align: center; display: flex; align-items: center; justify-content: center; }
+      button.tool-btn:hover { background-color: #e8f0fe; }
+
+      /* 優先リスト（タグ形式） */
+      .priority-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 24px; }
+      .priority-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: #e8f0fe; color: #1967d2; border-radius: 4px; font-size: 12px; }
+      .priority-chip .chip-remove { cursor: pointer; font-weight: bold; color: #5f6368; padding: 0 2px; line-height: 1; }
+      .priority-chip .chip-remove:hover { color: #c5221f; }
+      button.tool-btn-small { background-color: #fff; color: #1a73e8; border: 1px solid #1a73e8; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 5px; text-align: center; display: flex; align-items: center; justify-content: center; }
+      button.tool-btn-small:hover { background-color: #e8f0fe; }
+
+      #status { margin-top: 20px; padding: 10px; border-radius: 4px; font-size: 13px; line-height: 1.5; display: none; word-wrap: break-word;}
+      .success { background-color: #e6f4ea; color: #137333; border: 1px solid #ceead6; }
+      .error { background-color: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; }
+      .processing { background-color: #e8f0fe; color: #1967d2; border: 1px solid #d2e3fc; }
+    </style>
+  </head>
+  <body>
+    <div class="header">図面座標抽出 (機能強化版)</div>
+    
+    <div class="form-group">
+      <label for="fileInput">PDFファイルを選択</label>
+      <input type="file" id="fileInput" accept="application/pdf,image/*">
+      <div class="note">※面積・集計行は自動で除外されます</div>
+    </div>
+
+    <div class="form-group">
+      <label for="sheetName">作成するシート名 (任意)</label>
+      <input type="text" id="sheetName" placeholder="例: 全体座標リスト">
+    </div>
+
+    <button class="action" id="btnRun" onclick="processFile()">読み取り・シート作成</button>
+    
+    <!-- 事後操作用エリア -->
+    <div class="form-group tools-box">
+      <div class="tools-title">作成後の編集ツール</div>
+      <div class="note">※現在開いているシートに対して実行されます</div>
+      
+      <div style="margin-top: 8px;">
+        <label style="font-weight:normal; font-size:12px; margin-bottom: 3px;">優先項目（セルをクリックして追加）</label>
+        <div class="priority-list" id="priorityListContainer"></div>
+        <button class="tool-btn-small" onclick="addSelectedCells()">選択を追加</button>
+      </div>
+
+      <button class="tool-btn" onclick="runManualSort()">現在のシートを並び替え</button>
+      <button class="tool-btn" onclick="exportCsv()">CSVファイルで出力</button>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+      let priorityList = [];
+
+      function renderPriorityList() {
+        const container = document.getElementById('priorityListContainer');
+        container.innerHTML = priorityList.map((item, idx) =>
+          '<span class="priority-chip">' + escapeHtml(item) +
+          '<span class="chip-remove" onclick="removePriorityItem(' + idx + ')">×</span></span>'
+        ).join('');
+      }
+
+      function escapeHtml(s) {
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function removePriorityItem(idx) {
+        priorityList.splice(idx, 1);
+        renderPriorityList();
+      }
+
+      async function addSelectedCells() {
+        try {
+          const values = await runGoogleScript('getSelectedCellValues');
+          if (!values || values.length === 0) {
+            showStatus('セルを選択してから「選択を追加」を押してください。', 'error');
+            return;
+          }
+          values.forEach(v => {
+            if (v && !priorityList.includes(v)) priorityList.push(v);
+          });
+          renderPriorityList();
+        } catch (e) {
+          showStatus('エラー: ' + e.message, 'error');
+        }
+      }
+
+      function getMergedPriorityInput() {
+        return priorityList.join(', ');
+      }
+
+      async function processFile() {
+        const fileInput = document.getElementById('fileInput');
+        const sheetName = document.getElementById('sheetName').value;
+        const btn = document.getElementById('btnRun');
+
+        if (fileInput.files.length === 0) {
+          showStatus("ファイルを選択してください。", "error");
+          return;
+        }
+
+        const file = fileInput.files[0];
+        btn.disabled = true;
+        
+        try {
+          let mergedRows = [];
+          let detectedHeaders = [];
+
+          if (file.type === "application/pdf") {
+            const pdfData = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({data: pdfData}).promise;
+            
+            showStatus(`全${pdf.numPages}ページを検出。解析中...`, "processing");
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              btn.innerText = `ページ解析中 (${i}/${pdf.numPages})...`;
+              showStatus(`ページ ${i}/${pdf.numPages} をAI解析中...`, "processing");
+
+              const page = await pdf.getPage(i);
+              const scale = 2.0;
+              const viewport = page.getViewport({scale: scale});
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              await page.render({canvasContext: context, viewport: viewport}).promise;
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              const base64Data = dataUrl.split(',')[1];
+
+              const result = await runGoogleScript('analyzePage', base64Data, "image/jpeg");
+              
+              if (result && result.allRows && result.allRows.length > 0) {
+                 if (detectedHeaders.length === 0 && result.detectedHeaders) {
+                   detectedHeaders = result.detectedHeaders;
+                 }
+                 mergedRows = mergedRows.concat(result.allRows);
+              }
+            }
+
+          } else {
+            showStatus("画像を最適化して解析中...", "processing");
+            const dataUrl = await readFileAsDataURL(file);
+            const base64Data = dataUrl.split(',')[1];
+            
+            const result = await runGoogleScript('analyzePage', base64Data, file.type);
+            if (result) {
+              detectedHeaders = result.detectedHeaders;
+              mergedRows = result.allRows;
+            }
+          }
+
+          if (mergedRows.length === 0) {
+             showStatus("データが見つかりませんでした。", "error");
+             btn.disabled = false;
+             btn.innerText = "読み取り・シート作成";
+             return;
+          }
+
+          btn.innerText = "統合・書き込み中...";
+          showStatus(`全${mergedRows.length}行のデータを処理中...`, "processing");
+
+          const finalData = {
+            detectedHeaders: detectedHeaders,
+            allRows: mergedRows
+          };
+
+          const options = {
+            sort: true,
+            priorityColumns: ""
+          };
+
+          const msg = await runGoogleScript('writeMergedData', finalData, sheetName, options);
+          
+          showStatus(msg, "success");
+          btn.disabled = false;
+          btn.innerText = "読み取り・シート作成";
+          fileInput.value = "";
+
+        } catch (e) {
+          console.error(e);
+          showStatus("エラー発生: " + e.message, "error");
+          btn.disabled = false;
+          btn.innerText = "読み取り・シート作成";
+        }
+      }
+
+      // CSV出力
+      async function exportCsv() {
+        showStatus("CSVを準備しています...", "processing");
+        try {
+          const result = await runGoogleScript('exportSheetToCsv');
+          const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = result.filename;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          showStatus("CSVをダウンロードしました。", "success");
+        } catch (e) {
+          showStatus("エラー: " + e.message, "error");
+        }
+      }
+
+      // 手動並び替えの実行
+      async function runManualSort() {
+        const priorityColumns = getMergedPriorityInput();
+        const doSort = true;
+        
+        showStatus("アクティブシートを並び替えています...", "processing");
+        try {
+          const msg = await runGoogleScript('sortActiveSheetManually', priorityColumns, doSort);
+          showStatus(msg, "success");
+        } catch (e) {
+          showStatus("エラー: " + e.message, "error");
+        }
+      }
+
+      function runGoogleScript(funcName, ...args) {
+        // #region agent log
+        try { fetch('http://127.0.0.1:7243/ingest/615b7148-d9f3-476a-b274-902297c2f4e8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.html:runGoogleScript:call',message:'GAS call',data:{funcName:funcName,argsLen:args.length},timestamp:Date.now(),hypothesisId:'H0'})}).catch(()=>{}); } catch(e) {}
+        // #endregion
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler((r)=>{ try { fetch('http://127.0.0.1:7243/ingest/615b7148-d9f3-476a-b274-902297c2f4e8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.html:runGoogleScript:success',message:'GAS success',data:{funcName:funcName},timestamp:Date.now(),hypothesisId:'H0'})}).catch(()=>{}); } catch(e) {} resolve(r); })
+            .withFailureHandler((e)=>{ try { fetch('http://127.0.0.1:7243/ingest/615b7148-d9f3-476a-b274-902297c2f4e8',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Sidebar.html:runGoogleScript:error',message:'GAS error',data:{funcName:funcName,error:String(e)},timestamp:Date.now(),hypothesisId:'H0'})}).catch(()=>{}); } catch(e2) {} reject(e); })
+            [funcName](...args);
+        });
+      }
+
+      function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function showStatus(msg, type) {
+        const el = document.getElementById('status');
+        el.style.display = 'block';
+        el.className = type;
+        el.innerText = msg;
+      }
+    </script>
+  </body>
+</html>
