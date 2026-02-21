@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.2.0/encoding.min.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <style>
+    [v-cloak] { display: none; }
+    body { -webkit-tap-highlight-color: transparent; }
+    .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease, opacity 0.3s ease; }
+    .slide-up-enter-from, .slide-up-leave-to { transform: translateY(20px); opacity: 0; }
+    .tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; }
+    .notify-toast { animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s; }
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- 通知トースト -->
+<div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 space-y-2"></div>
+
+<div id="app" v-cloak>
+  <!-- ヘッダー -->
+  <header class="bg-blue-600 text-white px-4 py-3 shadow-md sticky top-0 z-40">
+    <h1 class="text-lg font-bold text-center">確定申告ツール</h1>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="pb-20 px-3 pt-3 max-w-lg mx-auto">
+
+    <!-- ===== 撮影/入力タブ ===== -->
+    <div v-if="currentTab === 'capture'">
+
+      <!-- ステップ1: モード選択 -->
+      <div v-if="captureStep === 'mode'">
+        <div class="space-y-3">
+          <!-- レシート撮影 -->
+          <button @click="startReceiptCapture" class="w-full bg-white rounded-xl shadow p-5 flex items-center gap-4 active:bg-gray-50 border border-gray-100">
+            <span class="material-icons-round text-4xl text-blue-500">photo_camera</span>
+            <div class="text-left">
+              <div class="font-bold text-gray-800">レシート撮影</div>
+              <div class="text-sm text-gray-500">カメラでレシートを撮影してAI解析</div>
+            </div>
+          </button>
+          <!-- 振込用紙撮影 -->
+          <button @click="startTransferCapture" class="w-full bg-white rounded-xl shadow p-5 flex items-center gap-4 active:bg-gray-50 border border-gray-100">
+            <span class="material-icons-round text-4xl text-purple-500">receipt_long</span>
+            <div class="text-left">
+              <div class="font-bold text-gray-800">振込用紙撮影</div>
+              <div class="text-sm text-gray-500">振込控えを撮影してAI解析</div>
+            </div>
+          </button>
+          <!-- 通帳/明細撮影 -->
+          <button @click="startBankCapture" class="w-full bg-white rounded-xl shadow p-5 flex items-center gap-4 active:bg-gray-50 border border-gray-100">
+            <span class="material-icons-round text-4xl text-teal-500">account_balance</span>
+            <div class="text-left">
+              <div class="font-bold text-gray-800">通帳/明細で収入記録</div>
+              <div class="text-sm text-gray-500">通帳やネットバンク画像からAIで入金抽出</div>
+            </div>
+          </button>
+          <!-- 手動入力 -->
+          <button @click="startManualInput" class="w-full bg-white rounded-xl shadow p-5 flex items-center gap-4 active:bg-gray-50 border border-gray-100">
+            <span class="material-icons-round text-4xl text-green-500">edit_note</span>
+            <div class="text-left">
+              <div class="font-bold text-gray-800">手動入力</div>
+              <div class="text-sm text-gray-500">テキストでざっくり入力してAI科目判定</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ2a: レシート撮影 -->
+      <div v-if="captureStep === 'receipt'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-blue-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">レシート撮影</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <!-- カメラ入力 -->
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative"
+               :class="{ 'border-blue-400 bg-blue-50': imagePreview }">
+            <input type="file" accept="image/*" capture="environment"
+                   @change="handleFileSelect" ref="fileInput"
+                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <div v-if="!imagePreview">
+              <span class="material-icons-round text-5xl text-gray-300">add_a_photo</span>
+              <p class="text-gray-400 text-sm mt-2">タップしてカメラを起動</p>
+            </div>
+            <div v-else class="relative">
+              <img :src="imagePreview" class="max-h-48 mx-auto rounded-lg">
+            </div>
+          </div>
+          <button v-if="imagePreview" @click="clearImage" class="text-red-500 text-sm flex items-center gap-1 mx-auto">
+            <span class="material-icons-round text-base">delete</span> 画像を削除
+          </button>
+
+          <!-- メモ入力 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">メモ（任意）</label>
+            <input type="text" v-model="userMemo" placeholder="例: Cursorの月額利用料"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none">
+          </div>
+
+          <button @click="analyzeReceipt" :disabled="!imagePreview || analyzing"
+                  class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-blue-700">
+            <span v-if="analyzing" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block"></span>
+              AI解析中...
+            </span>
+            <span v-else>AIで解析する</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ2c: 振込用紙撮影 -->
+      <div v-if="captureStep === 'transfer'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-blue-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">振込用紙撮影</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <!-- カメラ入力 -->
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative"
+               :class="{ 'border-purple-400 bg-purple-50': imagePreview }">
+            <input type="file" accept="image/*" capture="environment"
+                   @change="handleFileSelect" ref="transferFileInput"
+                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <div v-if="!imagePreview">
+              <span class="material-icons-round text-5xl text-gray-300">receipt_long</span>
+              <p class="text-gray-400 text-sm mt-2">タップして振込用紙を撮影</p>
+            </div>
+            <div v-else class="relative">
+              <img :src="imagePreview" class="max-h-48 mx-auto rounded-lg">
+            </div>
+          </div>
+          <button v-if="imagePreview" @click="clearImage" class="text-red-500 text-sm flex items-center gap-1 mx-auto">
+            <span class="material-icons-round text-base">delete</span> 画像を削除
+          </button>
+
+          <!-- 振込用途プルダウン -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">振込の用途</label>
+            <select v-model="transferPurpose"
+                    class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-300 focus:border-purple-400 outline-none bg-white">
+              <option v-for="opt in transferPurposeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+
+          <!-- メモ入力 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">メモ（任意）</label>
+            <input type="text" v-model="userMemo" placeholder="例: AWSサーバー利用料の振込"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-300 focus:border-purple-400 outline-none">
+          </div>
+
+          <button @click="analyzeTransfer" :disabled="!imagePreview || analyzing"
+                  class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-purple-700">
+            <span v-if="analyzing" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block"></span>
+              AI解析中...
+            </span>
+            <span v-else>AIで解析する</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ2b: 手動入力 -->
+      <div v-if="captureStep === 'manual'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-blue-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">手動入力</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">日付</label>
+            <input type="date" v-model="manualDate"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">金額（円）</label>
+            <input type="number" v-model="manualAmount" inputmode="numeric" placeholder="例: 2000"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">何に使ったか</label>
+            <input type="text" v-model="manualMemo" placeholder="例: Cursor月額、〇〇さんとカフェ打合せ"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+          </div>
+
+          <button @click="analyzeText" :disabled="!manualMemo || analyzing"
+                  class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-green-700">
+            <span v-if="analyzing" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block"></span>
+              AI判定中...
+            </span>
+            <span v-else>AIで科目を判定</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ2d: 通帳/明細撮影 -->
+      <div v-if="captureStep === 'bankStatement'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-teal-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">通帳/明細撮影</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <!-- カメラ入力 -->
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative"
+               :class="{ 'border-teal-400 bg-teal-50': imagePreview }">
+            <input type="file" accept="image/*" capture="environment"
+                   @change="handleFileSelect" ref="bankFileInput"
+                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            <div v-if="!imagePreview">
+              <span class="material-icons-round text-5xl text-gray-300">account_balance</span>
+              <p class="text-gray-400 text-sm mt-2">タップして通帳/明細を撮影</p>
+            </div>
+            <div v-else class="relative">
+              <img :src="imagePreview" class="max-h-48 mx-auto rounded-lg">
+            </div>
+          </div>
+          <button v-if="imagePreview" @click="clearImage" class="text-red-500 text-sm flex items-center gap-1 mx-auto">
+            <span class="material-icons-round text-base">delete</span> 画像を削除
+          </button>
+
+          <!-- メモ入力 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">メモ（任意）</label>
+            <input type="text" v-model="userMemo" placeholder="例: 2026年1月分の通帳、△△銀行"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-300 focus:border-teal-400 outline-none">
+          </div>
+
+          <button @click="analyzeBankStatement" :disabled="!imagePreview || analyzing"
+                  class="w-full bg-teal-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-teal-700">
+            <span v-if="analyzing" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block" style="border-top-color: #fff;"></span>
+              AIで入金を抽出中...
+            </span>
+            <span v-else>AIで入金を抽出する</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ: 取引選択 -->
+      <div v-if="captureStep === 'selectTransactions'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'bankStatement'" class="text-teal-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">入金取引の選択</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <!-- 0件の場合 -->
+          <div v-if="bankTransactions.length === 0" class="text-center py-8">
+            <span class="material-icons-round text-5xl text-gray-300">search_off</span>
+            <p class="text-gray-500 mt-2">入金取引が見つかりませんでした</p>
+            <button @click="captureStep = 'bankStatement'" class="mt-4 text-teal-600 font-bold text-sm">再撮影する</button>
+          </div>
+
+          <!-- 取引リスト -->
+          <div v-else class="space-y-3">
+            <div class="flex items-center justify-between">
+              <button @click="toggleAllBankSelect" class="text-sm text-teal-600 font-bold">
+                {{ bankSelectedIds.length === bankTransactions.length ? '全解除' : '全選択' }}
+              </button>
+              <span class="text-sm text-gray-500">{{ bankTransactions.length }}件の入金</span>
+            </div>
+
+            <div v-for="(tx, idx) in bankTransactions" :key="idx"
+                 @click="toggleBankSelect(idx)"
+                 class="border rounded-lg p-3 cursor-pointer transition-all"
+                 :class="bankSelectedIds.includes(idx) ? 'border-teal-400 bg-teal-50' : 'border-gray-200'">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" :checked="bankSelectedIds.includes(idx)" class="w-4 h-4 accent-teal-600 shrink-0" @click.stop>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">{{ tx.date }}</span>
+                    <span class="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 font-bold">{{ tx.accountTitle }}</span>
+                  </div>
+                  <div class="font-bold text-gray-800 text-sm truncate">{{ tx.storeName }}</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-bold text-teal-700">+{{ formatNumber(tx.amount) }}<span class="text-xs text-gray-400">円</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 選択合計 -->
+            <div class="bg-teal-50 rounded-lg p-3 flex justify-between items-center">
+              <span class="text-sm text-teal-700 font-bold">選択合計（{{ bankSelectedIds.length }}件）</span>
+              <span class="text-lg font-bold text-teal-700">{{ formatNumber(bankSelectedTotal) }}円</span>
+            </div>
+
+            <button @click="goToBankConfirm" :disabled="bankSelectedIds.length === 0"
+                    class="w-full bg-teal-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-teal-700">
+              選択した取引を確認へ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ステップ: 一括確認 -->
+      <div v-if="captureStep === 'confirmBatch'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'selectTransactions'" class="text-teal-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 戻る
+            </button>
+            <h2 class="font-bold text-gray-800">一括確認 & 保存</h2>
+            <div class="w-16"></div>
+          </div>
+
+          <!-- サマリー -->
+          <div class="bg-teal-50 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-sm text-teal-700 font-bold">{{ bankEditItems.length }}件</span>
+            <span class="text-lg font-bold text-teal-700">合計 {{ formatNumber(bankEditTotal) }}円</span>
+          </div>
+
+          <!-- 各取引カード -->
+          <div v-for="(item, idx) in bankEditItems" :key="idx" class="border border-gray-200 rounded-lg p-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-teal-600">取引 #{{ idx + 1 }}</span>
+              <button @click="removeBankEditItem(idx)" class="text-red-400 text-xs flex items-center gap-0.5">
+                <span class="material-icons-round text-sm">close</span> 除外
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-gray-500">日付</label>
+                <input type="date" v-model="item.date"
+                       class="w-full border rounded px-2 py-1.5 text-sm outline-none">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500">金額</label>
+                <input type="number" v-model="item.amount" inputmode="numeric"
+                       class="w-full border rounded px-2 py-1.5 text-sm outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500">取引先名</label>
+              <input type="text" v-model="item.storeName"
+                     class="w-full border rounded px-2 py-1.5 text-sm outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-gray-500">勘定科目</label>
+                <select v-model="item.accountTitle"
+                        class="w-full border rounded px-2 py-1.5 text-sm outline-none bg-white">
+                  <option value="売上高">売上高</option>
+                  <option value="雑収入">雑収入</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500">税率</label>
+                <select v-model="item.taxRate"
+                        class="w-full border rounded px-2 py-1.5 text-sm outline-none bg-white">
+                  <option value="10%">10%</option>
+                  <option value="8%">8%</option>
+                  <option value="非課税">非課税</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500">摘要</label>
+              <input type="text" v-model="item.description" maxlength="64"
+                     class="w-full border rounded px-2 py-1.5 text-sm outline-none">
+            </div>
+          </div>
+
+          <!-- 0件になった場合 -->
+          <div v-if="bankEditItems.length === 0" class="text-center py-4">
+            <p class="text-gray-500 text-sm">全て除外されました</p>
+            <button @click="captureStep = 'selectTransactions'" class="mt-2 text-teal-600 font-bold text-sm">取引選択に戻る</button>
+          </div>
+
+          <button v-if="bankEditItems.length > 0" @click="saveBatchIncome" :disabled="saving"
+                  class="w-full bg-teal-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-teal-700">
+            <span v-if="saving" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block" style="border-top-color: #fff;"></span>
+              一括保存中...
+            </span>
+            <span v-else>{{ bankEditItems.length }}件を一括保存</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ3: フォローアップ質問 -->
+      <div v-if="captureStep === 'followup'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-blue-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 最初に戻る
+            </button>
+            <h2 class="font-bold text-gray-800">確認事項</h2>
+            <div class="w-20"></div>
+          </div>
+
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-icons-round text-yellow-600">help_outline</span>
+              <span class="text-sm font-bold text-yellow-800">追加情報が必要です</span>
+            </div>
+            <p class="text-sm text-yellow-700">より正確な判定のため、以下の質問にお答えください。</p>
+          </div>
+
+          <div v-for="(q, idx) in followUpQuestions" :key="idx" class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700">{{ q }}</label>
+            <input type="text" v-model="followUpAnswers[idx]"
+                   class="w-full border rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 outline-none"
+                   placeholder="回答を入力...">
+          </div>
+
+          <button @click="submitFollowUp" :disabled="analyzing"
+                  class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300">
+            <span v-if="analyzing" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block"></span>
+              再判定中...
+            </span>
+            <span v-else>回答して再判定</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ステップ4: 確認 & 保存 -->
+      <div v-if="captureStep === 'confirm'">
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <button @click="captureStep = 'mode'" class="text-blue-600 text-sm flex items-center gap-1">
+              <span class="material-icons-round text-lg">arrow_back</span> 最初に戻る
+            </button>
+            <h2 class="font-bold text-gray-800">確認 & 保存</h2>
+            <div class="w-20"></div>
+          </div>
+
+          <!-- 分類バッジ -->
+          <div class="flex justify-center">
+            <span v-if="analysisResult.classification === 'clear'"
+                  class="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700">
+              経費として明確
+            </span>
+            <span v-else-if="analysisResult.classification === 'questionable'"
+                  class="px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
+              要確認
+            </span>
+            <span v-else-if="analysisResult.classification === 'not_expense'"
+                  class="px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700">
+              経費外の可能性
+            </span>
+          </div>
+
+          <!-- not_expense 警告 -->
+          <div v-if="analysisResult.classification === 'not_expense'" class="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p class="text-sm text-red-700">AIはこの支出を経費として認識しませんでした。それでも計上する場合は内容を確認の上保存してください。</p>
+          </div>
+
+          <!-- confidence低い場合の警告 -->
+          <div v-if="analysisResult.confidence < 0.6" class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <p class="text-sm text-orange-700">
+              <span class="material-icons-round text-base align-text-bottom">warning</span>
+              AI判定の信頼度が低いです（{{ Math.round(analysisResult.confidence * 100) }}%）。内容をよく確認してください。
+            </p>
+          </div>
+
+          <!-- 編集可能フォーム -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">取引日付</label>
+              <input type="date" v-model="editDate"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">店舗名</label>
+              <input type="text" v-model="editStoreName"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">金額（円）</label>
+              <input type="number" v-model="editAmount" inputmode="numeric"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+            </div>
+            <!-- 振込手数料（振込解析時のみ表示） -->
+            <div v-if="editTransferFee > 0" class="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-purple-800">振込手数料</span>
+                <span class="text-sm font-bold text-purple-800">{{ formatNumber(editTransferFee) }}円</span>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="saveTransferFee" class="w-4 h-4 accent-purple-600">
+                <span class="text-xs text-purple-700">「支払手数料」として別途計上する</span>
+              </label>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">税率</label>
+              <select v-model="editTaxRate"
+                      class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none bg-white">
+                <option value="10%">10%（標準）</option>
+                <option value="8%">8%（軽減税率）</option>
+                <option value="非課税">非課税</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">勘定科目</label>
+              <select v-model="editAccountTitle"
+                      class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none bg-white">
+                <option value="地代家賃">地代家賃</option>
+                <option value="水道光熱費">水道光熱費</option>
+                <option value="通信費">通信費</option>
+                <option value="会議費">会議費</option>
+                <option value="消耗品費">消耗品費</option>
+                <option value="新聞図書費">新聞図書費</option>
+                <option value="接待交際費">接待交際費</option>
+                <option value="旅費交通費">旅費交通費</option>
+                <option value="外注費">外注費</option>
+                <option value="広告宣伝費">広告宣伝費</option>
+                <option value="研修費">研修費</option>
+                <option value="諸会費">諸会費</option>
+                <option value="保険料">保険料</option>
+                <option value="租税公課">租税公課</option>
+                <option value="車両掛費">車両掛費</option>
+                <option value="支払手数料">支払手数料</option>
+                <option value="事業主貸">事業主貸</option>
+                <option value="雑費">雑費</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">摘要（最大64文字）</label>
+              <input type="text" v-model="editDescription" maxlength="64"
+                     class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none">
+              <p class="text-xs text-gray-400 text-right mt-0.5">{{ editDescription.length }}/64</p>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">支払方法</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button v-for="m in paymentMethods" :key="m"
+                        @click="editPaymentMethod = m"
+                        class="py-2 px-1 text-xs font-bold rounded-lg border-2 text-center transition-all"
+                        :class="editPaymentMethod === m ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'">
+                  {{ m }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI判定理由（折りたたみ） -->
+          <details class="text-sm">
+            <summary class="text-gray-500 cursor-pointer">AI判定理由を表示</summary>
+            <p class="mt-1 text-gray-600 bg-gray-50 p-2 rounded text-xs">{{ analysisResult.reasoning }}</p>
+          </details>
+
+          <!-- 保存ボタン -->
+          <button @click="saveExpense" :disabled="saving"
+                  class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow disabled:bg-gray-300 active:bg-blue-700">
+            <span v-if="saving" class="flex items-center justify-center gap-2">
+              <span class="loader border-4 border-white/30 rounded-full w-5 h-5 inline-block"></span>
+              保存中...
+            </span>
+            <span v-else>保存する</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 一覧タブ ===== -->
+    <div v-if="currentTab === 'list'">
+      <!-- フィルタ -->
+      <div class="bg-white rounded-xl shadow p-3 mb-3 space-y-2">
+        <div class="flex items-center gap-2">
+          <select v-model="filterYear" @change="loadExpenses"
+                  class="border rounded-lg px-2 py-1.5 text-sm bg-white flex-1">
+            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}年</option>
+          </select>
+          <select v-model="filterMonth" @change="loadExpenses"
+                  class="border rounded-lg px-2 py-1.5 text-sm bg-white flex-1">
+            <option value="">全月</option>
+            <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+          </select>
+          <button @click="loadExpenses" class="p-1.5 text-blue-600">
+            <span class="material-icons-round">refresh</span>
+          </button>
+        </div>
+        <!-- 種別フィルタ -->
+        <div class="flex gap-1">
+          <button v-for="ft in [{v:'',l:'全て'},{v:'支出',l:'支出'},{v:'収入',l:'収入'}]" :key="ft.v"
+                  @click="filterTransactionType = ft.v; loadExpenses()"
+                  class="flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all"
+                  :class="filterTransactionType === ft.v ? (ft.v === '収入' ? 'border-teal-500 bg-teal-50 text-teal-700' : ft.v === '支出' ? 'border-red-400 bg-red-50 text-red-700' : 'border-blue-500 bg-blue-50 text-blue-700') : 'border-gray-200 text-gray-500'">
+            {{ ft.l }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ローディング -->
+      <div v-if="listLoading" class="text-center py-8">
+        <span class="loader border-4 border-gray-200 rounded-full w-8 h-8 inline-block"></span>
+        <p class="text-sm text-gray-500 mt-2">読み込み中...</p>
+      </div>
+
+      <!-- 空状態 -->
+      <div v-else-if="expenses.length === 0" class="text-center py-12">
+        <span class="material-icons-round text-5xl text-gray-300">receipt_long</span>
+        <p class="text-gray-400 mt-2">経費データがありません</p>
+      </div>
+
+      <!-- リスト -->
+      <div v-else class="space-y-2">
+        <div class="text-xs text-gray-500 text-right px-1 space-x-2">
+          <span>{{ expenses.length }}件</span>
+          <span>支出: {{ formatNumber(expenseTotal) }}円</span>
+          <span class="text-teal-600">収入: {{ formatNumber(incomeTotal) }}円</span>
+        </div>
+        <div v-for="exp in expenses" :key="exp.rowIndex"
+             @click="openDetail(exp)"
+             class="bg-white rounded-xl shadow p-3 flex items-center gap-3 active:bg-gray-50 cursor-pointer border border-gray-100">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400">{{ exp.date }}</span>
+              <span class="text-xs px-1.5 py-0.5 rounded font-bold"
+                    :class="{
+                      'bg-green-100 text-green-700': exp.status === '確認済',
+                      'bg-yellow-100 text-yellow-700': exp.status === '未確認',
+                      'bg-gray-100 text-gray-500': exp.status === '除外'
+                    }">{{ exp.status }}</span>
+              <span v-if="exp.transactionType === '収入'" class="text-xs px-1.5 py-0.5 rounded font-bold bg-teal-100 text-teal-700">収入</span>
+            </div>
+            <div class="font-bold text-gray-800 text-sm truncate">{{ exp.storeName || '（店舗名なし）' }}</div>
+            <div class="text-xs text-gray-500 truncate">{{ exp.accountTitle }} | {{ exp.description }}</div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="font-bold" :class="exp.transactionType === '収入' ? 'text-teal-700' : 'text-gray-800'">
+              <span v-if="exp.transactionType === '収入'">+</span>{{ formatNumber(exp.amount) }}<span class="text-xs text-gray-400">円</span>
+            </div>
+          </div>
+          <span class="material-icons-round text-gray-300">chevron_right</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 詳細モーダル ===== -->
+    <div v-if="detailItem" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" @click.self="detailItem = null">
+      <div class="bg-white rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-lg">{{ detailItem.transactionType === '収入' ? '収入詳細' : '経費詳細' }}</h3>
+            <span v-if="detailItem.transactionType === '収入'" class="text-xs px-2 py-0.5 rounded-full font-bold bg-teal-100 text-teal-700">収入</span>
+          </div>
+          <button @click="detailItem = null" class="text-gray-400">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <!-- 詳細編集フォーム -->
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">取引日付</label>
+            <input type="date" v-model="detailItem.date"
+                   class="w-full border rounded-lg px-3 py-2 text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">店舗名</label>
+            <input type="text" v-model="detailItem.storeName"
+                   class="w-full border rounded-lg px-3 py-2 text-sm outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">金額</label>
+              <input type="number" v-model="detailItem.amount" inputmode="numeric"
+                     class="w-full border rounded-lg px-3 py-2 text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-0.5">税率</label>
+              <select v-model="detailItem.taxRate"
+                      class="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white">
+                <option value="10%">10%</option>
+                <option value="8%">8%</option>
+                <option value="非課税">非課税</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">勘定科目</label>
+            <select v-if="detailItem.transactionType === '収入'" v-model="detailItem.accountTitle"
+                    class="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white">
+              <option value="売上高">売上高</option>
+              <option value="雑収入">雑収入</option>
+            </select>
+            <select v-else v-model="detailItem.accountTitle"
+                    class="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white">
+              <option value="通信費">通信費</option>
+              <option value="会議費">会議費</option>
+              <option value="消耗品費">消耗品費</option>
+              <option value="新聞図書費">新聞図書費</option>
+              <option value="接待交際費">接待交際費</option>
+              <option value="旅費交通費">旅費交通費</option>
+              <option value="車両掛費">車両掛費</option>
+              <option value="雑費">雑費</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">{{ detailItem.transactionType === '収入' ? '入金口座' : '支払方法' }}</label>
+            <select v-if="detailItem.transactionType === '収入'" v-model="detailItem.paymentMethod"
+                    class="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white">
+              <option value="普通預金">普通預金</option>
+              <option value="当座預金">当座預金</option>
+            </select>
+            <select v-else v-model="detailItem.paymentMethod"
+                    class="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white">
+              <option value="現金">現金</option>
+              <option value="事業用クレジットカード">事業用クレジットカード</option>
+              <option value="個人立替">個人立替</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">摘要</label>
+            <input type="text" v-model="detailItem.description" maxlength="64"
+                   class="w-full border rounded-lg px-3 py-2 text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-0.5">ステータス</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button v-for="s in ['確認済','未確認','除外']" :key="s"
+                      @click="detailItem.status = s"
+                      class="py-2 text-xs font-bold rounded-lg border-2 transition-all"
+                      :class="detailItem.status === s ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'">
+                {{ s }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI判定理由 -->
+        <details v-if="detailItem.reasoning" class="text-sm">
+          <summary class="text-gray-500 cursor-pointer">AI判定理由</summary>
+          <p class="mt-1 text-xs text-gray-600 bg-gray-50 p-2 rounded">{{ detailItem.reasoning }}</p>
+        </details>
+
+        <!-- 画像リンク -->
+        <a v-if="detailItem.imageUrl" :href="detailItem.imageUrl" target="_blank"
+           class="text-blue-600 text-sm flex items-center gap-1">
+          <span class="material-icons-round text-base">image</span> レシート画像を表示
+        </a>
+
+        <!-- アクションボタン -->
+        <div class="flex gap-2">
+          <button @click="updateDetail" :disabled="saving"
+                  class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg disabled:bg-gray-300">
+            {{ saving ? '更新中...' : '更新する' }}
+          </button>
+          <button @click="confirmDeleteDetail"
+                  class="px-4 py-2.5 bg-red-50 text-red-600 font-bold rounded-lg border border-red-200">
+            削除
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CSV出力タブ ===== -->
+    <div v-if="currentTab === 'csv'">
+      <div class="bg-white rounded-xl shadow p-4 space-y-4">
+        <h2 class="font-bold text-gray-800 text-center">弥生会計CSV出力</h2>
+
+        <!-- 年月選択 -->
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">年</label>
+            <select v-model="csvYear" class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+              <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}年</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">月</label>
+            <select v-model="csvMonth" class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">全月</option>
+              <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- プレビュー -->
+        <button @click="previewCsv" :disabled="csvLoading"
+                class="w-full py-2.5 border-2 border-blue-500 text-blue-600 font-bold rounded-lg bg-white active:bg-blue-50">
+          {{ csvLoading ? 'プレビュー中...' : 'プレビュー' }}
+        </button>
+
+        <div v-if="csvPreview" class="bg-gray-50 rounded-lg p-3 space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600">対象件数</span>
+            <span class="font-bold">{{ csvPreview.count }}件</span>
+          </div>
+          <div v-if="csvPreview.expenseCount > 0" class="flex justify-between text-sm">
+            <span class="text-gray-600">支出（{{ csvPreview.expenseCount }}件）</span>
+            <span class="font-bold text-red-600">{{ formatNumber(csvPreview.expenseTotal) }}円</span>
+          </div>
+          <div v-if="csvPreview.incomeCount > 0" class="flex justify-between text-sm">
+            <span class="text-gray-600">収入（{{ csvPreview.incomeCount }}件）</span>
+            <span class="font-bold text-teal-600">{{ formatNumber(csvPreview.incomeTotal) }}円</span>
+          </div>
+          <div class="flex justify-between text-sm border-t pt-1">
+            <span class="text-gray-600">合計金額</span>
+            <span class="font-bold">{{ formatNumber(csvPreview.totalAmount) }}円</span>
+          </div>
+        </div>
+
+        <button v-if="csvPreview && csvPreview.count > 0" @click="downloadCsv"
+                class="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow active:bg-green-700">
+          <span class="material-icons-round text-base align-text-bottom mr-1">download</span>
+          CSVダウンロード
+        </button>
+
+        <div v-if="csvPreview && csvPreview.count === 0" class="text-center text-sm text-gray-500 py-2">
+          出力対象のデータがありません。<br>ステータスを「確認済」にしてください。
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ボトムタブナビゲーション -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 tab-bar z-40">
+    <div class="max-w-lg mx-auto flex">
+      <button @click="switchTab('capture')"
+              class="flex-1 py-2 flex flex-col items-center gap-0.5"
+              :class="currentTab === 'capture' ? 'text-blue-600' : 'text-gray-400'">
+        <span class="material-icons-round text-2xl">add_circle</span>
+        <span class="text-[10px] font-bold">撮影/入力</span>
+      </button>
+      <button @click="switchTab('list')"
+              class="flex-1 py-2 flex flex-col items-center gap-0.5"
+              :class="currentTab === 'list' ? 'text-blue-600' : 'text-gray-400'">
+        <span class="material-icons-round text-2xl">list_alt</span>
+        <span class="text-[10px] font-bold">一覧</span>
+      </button>
+      <button @click="switchTab('csv')"
+              class="flex-1 py-2 flex flex-col items-center gap-0.5"
+              :class="currentTab === 'csv' ? 'text-blue-600' : 'text-gray-400'">
+        <span class="material-icons-round text-2xl">download</span>
+        <span class="text-[10px] font-bold">CSV出力</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 削除確認ダイアログ -->
+  <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" @click.self="showDeleteConfirm = false">
+    <div class="bg-white rounded-xl p-5 max-w-sm w-full space-y-4">
+      <p class="text-center font-bold text-gray-800">この経費データを削除しますか？</p>
+      <p class="text-center text-sm text-gray-500">この操作は取り消せません。</p>
+      <div class="flex gap-3">
+        <button @click="showDeleteConfirm = false" class="flex-1 py-2.5 border rounded-lg font-bold text-gray-600">キャンセル</button>
+        <button @click="deleteDetail" class="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-bold">削除する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── GAS通信ラッパー ──────────────────────────────
+const gas = (funcName, ...args) => new Promise((resolve, reject) => {
+  if (typeof google === 'undefined' || !google.script) {
+    console.warn('GAS環境ではありません');
+    reject(new Error('GAS環境が見つかりません'));
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(resolve)
+    .withFailureHandler(err => reject(new Error(err)))
+    [funcName](...args);
+});
+
+// ── 通知システム ─────────────────────────────────
+function notify(message, type) {
+  type = type || 'info';
+  var container = document.getElementById('toast-container');
+  var toast = document.createElement('div');
+  var colors = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    warning: 'bg-yellow-500 text-yellow-900'
+  };
+  var textColor = type === 'warning' ? '' : 'text-white';
+  toast.className = 'notify-toast px-4 py-2.5 rounded-lg shadow-lg text-sm font-bold ' + (colors[type] || colors.info) + ' ' + textColor;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 3000);
+}
+
+// ── 画像リサイズ ─────────────────────────────────
+function processFile(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var MAX_WIDTH = 1600;
+        var width = img.width;
+        var height = img.height;
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve({
+          mimeType: 'image/jpeg',
+          data: dataUrl.split(',')[1],
+          previewUrl: dataUrl
+        });
+      };
+      img.onerror = function() { reject(new Error('画像の読み込みに失敗しました')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { reject(new Error('ファイルの読み込みに失敗しました')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Vue App ──────────────────────────────────────
+const { createApp, ref, reactive, onMounted, computed } = Vue;
+
+const app = createApp({
+  setup() {
+    // --- 共通 ---
+    const currentTab = ref('capture');
+    const analyzing = ref(false);
+    const saving = ref(false);
+
+    // --- 撮影/入力 ---
+    const captureStep = ref('mode');
+    const imagePreview = ref(null);
+    const imageData = ref(null);
+    const imageMimeType = ref('image/jpeg');
+    const userMemo = ref('');
+    const fileInput = ref(null);
+    const transferFileInput = ref(null);
+    const bankFileInput = ref(null);
+    const transferPurpose = ref('');
+    const transferPurposeOptions = [
+      { value: '', label: '-- 選択してください --' },
+      { value: '家賃・地代（事務所・駐車場）', label: '家賃・地代（事務所・駐車場）' },
+      { value: '電気料金', label: '電気料金' },
+      { value: 'ガス料金', label: 'ガス料金' },
+      { value: '水道料金', label: '水道料金' },
+      { value: 'インターネット・電話料金', label: 'インターネット・電話料金' },
+      { value: 'サーバー・クラウド利用料', label: 'サーバー・クラウド利用料' },
+      { value: 'ソフトウェア・SaaS利用料', label: 'ソフトウェア・SaaS利用料' },
+      { value: '外注費・業務委託費', label: '外注費・業務委託費' },
+      { value: '仕入れ代金', label: '仕入れ代金' },
+      { value: 'リース・レンタル料', label: 'リース・レンタル料' },
+      { value: '広告宣伝費', label: '広告宣伝費' },
+      { value: '研修・セミナー費', label: '研修・セミナー費' },
+      { value: '税金（事業税・消費税・固定資産税等）', label: '税金（事業税・消費税・固定資産税等）' },
+      { value: '国民健康保険料', label: '国民健康保険料' },
+      { value: '国民年金保険料', label: '国民年金保険料' },
+      { value: '損害保険料（火災・賠償等）', label: '損害保険料（火災・賠償等）' },
+      { value: '組合費・協会年会費', label: '組合費・協会年会費' },
+      { value: '借入金返済', label: '借入金返済' },
+      { value: '消耗品（備品・事務用品等）', label: '消耗品（備品・事務用品等）' },
+      { value: 'その他', label: 'その他' }
+    ];
+
+    // 振込手数料
+    const editTransferFee = ref(0);
+    const saveTransferFee = ref(true);
+
+    // 手動入力
+    const today = new Date();
+    const manualDate = ref(today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0'));
+    const manualAmount = ref('');
+    const manualMemo = ref('');
+
+    // フォローアップ
+    const followUpQuestions = ref([]);
+    const followUpAnswers = ref([]);
+    const analysisResult = ref({});
+
+    // 確認画面の編集フィールド
+    const editDate = ref('');
+    const editStoreName = ref('');
+    const editAmount = ref('');
+    const editTaxRate = ref('10%');
+    const editAccountTitle = ref('');
+    const editDescription = ref('');
+    const editPaymentMethod = ref('個人立替');
+    const paymentMethods = ['現金', '事業用クレジットカード', '個人立替'];
+
+    // --- 一覧 ---
+    const expenses = ref([]);
+    const listLoading = ref(false);
+    const filterYear = ref(today.getFullYear());
+    const filterMonth = ref('');
+    const detailItem = ref(null);
+    const showDeleteConfirm = ref(false);
+
+    // --- CSV ---
+    const csvYear = ref(today.getFullYear());
+    const csvMonth = ref('');
+    const csvPreview = ref(null);
+    const csvLoading = ref(false);
+
+    // --- 通帳/明細 ---
+    const bankTransactions = ref([]);
+    const bankSelectedIds = ref([]);
+    const bankImageUrl = ref('');
+    const bankEditItems = ref([]);
+    const filterTransactionType = ref('');
+
+    // --- 年オプション ---
+    const yearOptions = computed(function() {
+      var years = [];
+      for (var y = today.getFullYear(); y >= today.getFullYear() - 3; y--) {
+        years.push(y);
+      }
+      return years;
+    });
+
+    // --- 合計金額 ---
+    const totalAmount = computed(function() {
+      return expenses.value.reduce(function(sum, e) { return sum + (Number(e.amount) || 0); }, 0);
+    });
+
+    const expenseTotal = computed(function() {
+      return expenses.value.filter(function(e) { return e.transactionType !== '収入'; })
+        .reduce(function(sum, e) { return sum + (Number(e.amount) || 0); }, 0);
+    });
+
+    const incomeTotal = computed(function() {
+      return expenses.value.filter(function(e) { return e.transactionType === '収入'; })
+        .reduce(function(sum, e) { return sum + (Number(e.amount) || 0); }, 0);
+    });
+
+    const bankSelectedTotal = computed(function() {
+      return bankSelectedIds.value.reduce(function(sum, idx) {
+        return sum + (Number(bankTransactions.value[idx].amount) || 0);
+      }, 0);
+    });
+
+    const bankEditTotal = computed(function() {
+      return bankEditItems.value.reduce(function(sum, item) {
+        return sum + (Number(item.amount) || 0);
+      }, 0);
+    });
+
+    // --- メソッド ---
+
+    function switchTab(tab) {
+      currentTab.value = tab;
+      if (tab === 'list') loadExpenses();
+      if (tab === 'csv') { csvPreview.value = null; }
+    }
+
+    function startReceiptCapture() {
+      captureStep.value = 'receipt';
+      clearImage();
+      userMemo.value = '';
+    }
+
+    function startTransferCapture() {
+      captureStep.value = 'transfer';
+      clearImage();
+      userMemo.value = '';
+      transferPurpose.value = '';
+    }
+
+    function startBankCapture() {
+      captureStep.value = 'bankStatement';
+      clearImage();
+      userMemo.value = '';
+      bankTransactions.value = [];
+      bankSelectedIds.value = [];
+      bankImageUrl.value = '';
+      bankEditItems.value = [];
+    }
+
+    function startManualInput() {
+      captureStep.value = 'manual';
+      manualDate.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+      manualAmount.value = '';
+      manualMemo.value = '';
+    }
+
+    async function handleFileSelect(event) {
+      var files = event.target.files;
+      if (!files || files.length === 0) return;
+      try {
+        var result = await processFile(files[0]);
+        imagePreview.value = result.previewUrl;
+        imageData.value = result.data;
+        imageMimeType.value = result.mimeType;
+      } catch (e) {
+        notify('画像の処理に失敗しました', 'error');
+      }
+    }
+
+    function clearImage() {
+      imagePreview.value = null;
+      imageData.value = null;
+      if (fileInput.value) fileInput.value.value = '';
+      if (transferFileInput.value) transferFileInput.value.value = '';
+      if (bankFileInput.value) bankFileInput.value.value = '';
+    }
+
+    async function analyzeReceipt() {
+      if (!imageData.value) return;
+      analyzing.value = true;
+      try {
+        var res = JSON.parse(await gas('analyzeReceipt', {
+          imageData: imageData.value,
+          mimeType: imageMimeType.value,
+          userMemo: userMemo.value
+        }));
+        analysisResult.value = res;
+        handleAnalysisResult(res);
+      } catch (e) {
+        notify('解析に失敗しました: ' + e.message, 'error');
+      } finally {
+        analyzing.value = false;
+      }
+    }
+
+    async function analyzeTransfer() {
+      if (!imageData.value) return;
+      analyzing.value = true;
+      try {
+        var res = JSON.parse(await gas('analyzeTransferSlip', {
+          imageData: imageData.value,
+          mimeType: imageMimeType.value,
+          userMemo: userMemo.value,
+          transferPurpose: transferPurpose.value
+        }));
+        analysisResult.value = res;
+        handleAnalysisResult(res);
+      } catch (e) {
+        notify('解析に失敗しました: ' + e.message, 'error');
+      } finally {
+        analyzing.value = false;
+      }
+    }
+
+    async function analyzeText() {
+      if (!manualMemo.value) return;
+      analyzing.value = true;
+      try {
+        var dateForApi = manualDate.value ? manualDate.value.replace(/-/g, '/') : '';
+        var res = JSON.parse(await gas('analyzeTextExpense', {
+          userMemo: manualMemo.value,
+          date: dateForApi,
+          amount: manualAmount.value
+        }));
+        analysisResult.value = res;
+        handleAnalysisResult(res);
+      } catch (e) {
+        notify('判定に失敗しました: ' + e.message, 'error');
+      } finally {
+        analyzing.value = false;
+      }
+    }
+
+    async function analyzeBankStatement() {
+      if (!imageData.value) return;
+      analyzing.value = true;
+      try {
+        var res = JSON.parse(await gas('analyzeBankStatement', {
+          imageData: imageData.value,
+          mimeType: imageMimeType.value,
+          userMemo: userMemo.value
+        }));
+        bankTransactions.value = res.transactions || [];
+        bankImageUrl.value = res.imageUrl || '';
+        // 全選択をデフォルトに
+        bankSelectedIds.value = bankTransactions.value.map(function(_, i) { return i; });
+        captureStep.value = 'selectTransactions';
+      } catch (e) {
+        notify('解析に失敗しました: ' + e.message, 'error');
+      } finally {
+        analyzing.value = false;
+      }
+    }
+
+    function toggleAllBankSelect() {
+      if (bankSelectedIds.value.length === bankTransactions.value.length) {
+        bankSelectedIds.value = [];
+      } else {
+        bankSelectedIds.value = bankTransactions.value.map(function(_, i) { return i; });
+      }
+    }
+
+    function toggleBankSelect(idx) {
+      var pos = bankSelectedIds.value.indexOf(idx);
+      if (pos >= 0) {
+        bankSelectedIds.value.splice(pos, 1);
+      } else {
+        bankSelectedIds.value.push(idx);
+      }
+    }
+
+    function goToBankConfirm() {
+      bankEditItems.value = bankSelectedIds.value
+        .sort(function(a, b) { return a - b; })
+        .map(function(idx) {
+          var tx = bankTransactions.value[idx];
+          return {
+            date: (tx.date || '').replace(/\//g, '-'),
+            storeName: tx.storeName || '',
+            amount: tx.amount || 0,
+            taxRate: tx.taxRate || '10%',
+            accountTitle: tx.accountTitle || '売上高',
+            description: tx.description || '',
+            reasoning: tx.reasoning || ''
+          };
+        });
+      captureStep.value = 'confirmBatch';
+    }
+
+    function removeBankEditItem(idx) {
+      bankEditItems.value.splice(idx, 1);
+    }
+
+    async function saveBatchIncome() {
+      if (bankEditItems.value.length === 0) return;
+      saving.value = true;
+      try {
+        var dataArray = bankEditItems.value.map(function(item) {
+          return {
+            date: item.date.replace(/-/g, '/'),
+            storeName: item.storeName,
+            amount: item.amount,
+            taxRate: item.taxRate,
+            accountTitle: item.accountTitle,
+            description: item.description,
+            imageUrl: bankImageUrl.value,
+            userMemo: userMemo.value || '',
+            reasoning: item.reasoning
+          };
+        });
+        var result = JSON.parse(await gas('saveBatchIncome', dataArray));
+        if (result.success) {
+          notify(result.count + '件の収入を保存しました', 'success');
+          resetCapture();
+        }
+      } catch (e) {
+        notify('保存に失敗しました: ' + e.message, 'error');
+      } finally {
+        saving.value = false;
+      }
+    }
+
+    function handleAnalysisResult(res) {
+      if (res.classification === 'questionable' && res.followUpQuestions && res.followUpQuestions.length > 0) {
+        followUpQuestions.value = res.followUpQuestions;
+        followUpAnswers.value = res.followUpQuestions.map(function() { return ''; });
+        captureStep.value = 'followup';
+      } else {
+        goToConfirm(res);
+      }
+    }
+
+    async function submitFollowUp() {
+      analyzing.value = true;
+      try {
+        var answersText = followUpQuestions.value.map(function(q, i) {
+          return 'Q: ' + q + '\nA: ' + (followUpAnswers.value[i] || '（未回答）');
+        }).join('\n\n');
+        var res = JSON.parse(await gas('analyzeFollowUp', {
+          originalResult: analysisResult.value,
+          answers: answersText
+        }));
+        analysisResult.value = res;
+        goToConfirm(res);
+      } catch (e) {
+        notify('再判定に失敗しました: ' + e.message, 'error');
+      } finally {
+        analyzing.value = false;
+      }
+    }
+
+    function goToConfirm(res) {
+      // 日付をinput[type=date]用に変換 (YYYY/MM/DD → YYYY-MM-DD)
+      var d = res.date || '';
+      editDate.value = d.replace(/\//g, '-');
+      editStoreName.value = res.storeName || '';
+      editAmount.value = res.amount || '';
+      editTaxRate.value = res.taxRate || '10%';
+      editAccountTitle.value = res.accountTitle || '';
+      editDescription.value = res.description || '';
+      editPaymentMethod.value = '個人立替';
+      // 振込手数料
+      editTransferFee.value = Number(res.transferFee) || 0;
+      saveTransferFee.value = editTransferFee.value > 0;
+      captureStep.value = 'confirm';
+    }
+
+    async function saveExpense() {
+      if (!editAmount.value) {
+        notify('金額を入力してください', 'warning');
+        return;
+      }
+      saving.value = true;
+      try {
+        // 重複チェック
+        var dupCheck = JSON.parse(await gas('checkDuplicate', {
+          date: editDate.value.replace(/-/g, '/'),
+          amount: editAmount.value,
+          storeName: editStoreName.value
+        }));
+        if (dupCheck.isDuplicate) {
+          if (!confirm(dupCheck.message + '\nそれでも保存しますか？')) {
+            saving.value = false;
+            return;
+          }
+        }
+
+        await gas('saveExpense', {
+          date: editDate.value.replace(/-/g, '/'),
+          storeName: editStoreName.value,
+          amount: editAmount.value,
+          taxRate: editTaxRate.value,
+          accountTitle: editAccountTitle.value,
+          paymentMethod: editPaymentMethod.value,
+          description: editDescription.value,
+          classification: analysisResult.value.classification || 'clear',
+          status: '確認済',
+          imageUrl: analysisResult.value.imageUrl || '',
+          userMemo: userMemo.value || manualMemo.value || '',
+          reasoning: analysisResult.value.reasoning || '',
+          followUpAnswers: ''
+        });
+        // 振込手数料を別途保存
+        if (saveTransferFee.value && editTransferFee.value > 0) {
+          await gas('saveExpense', {
+            date: editDate.value.replace(/-/g, '/'),
+            storeName: editStoreName.value,
+            amount: editTransferFee.value,
+            taxRate: '非課税',
+            accountTitle: '支払手数料',
+            paymentMethod: editPaymentMethod.value,
+            description: '[振込手数料] ' + editStoreName.value + 'への振込手数料',
+            classification: 'clear',
+            status: '確認済',
+            imageUrl: analysisResult.value.imageUrl || '',
+            userMemo: '',
+            reasoning: '振込手数料の自動計上',
+            followUpAnswers: ''
+          });
+        }
+        var feeMsg = (saveTransferFee.value && editTransferFee.value > 0) ? '（手数料も計上）' : '';
+        notify('保存しました' + feeMsg, 'success');
+        resetCapture();
+      } catch (e) {
+        notify('保存に失敗しました: ' + e.message, 'error');
+      } finally {
+        saving.value = false;
+      }
+    }
+
+    function resetCapture() {
+      captureStep.value = 'mode';
+      clearImage();
+      userMemo.value = '';
+      manualMemo.value = '';
+      manualAmount.value = '';
+      analysisResult.value = {};
+      followUpQuestions.value = [];
+      followUpAnswers.value = [];
+      transferPurpose.value = '';
+      editTransferFee.value = 0;
+      saveTransferFee.value = true;
+      bankTransactions.value = [];
+      bankSelectedIds.value = [];
+      bankImageUrl.value = '';
+      bankEditItems.value = [];
+    }
+
+    // --- 一覧 ---
+    async function loadExpenses() {
+      listLoading.value = true;
+      try {
+        var filters = { year: filterYear.value };
+        if (filterMonth.value) filters.month = filterMonth.value;
+        if (filterTransactionType.value) filters.transactionType = filterTransactionType.value;
+        expenses.value = JSON.parse(await gas('getExpenses', filters));
+      } catch (e) {
+        notify('データの読み込みに失敗しました', 'error');
+      } finally {
+        listLoading.value = false;
+      }
+    }
+
+    function openDetail(exp) {
+      // date をinput[type=date]用に変換
+      var item = Object.assign({}, exp);
+      if (item.date) item.date = item.date.replace(/\//g, '-');
+      detailItem.value = item;
+    }
+
+    async function updateDetail() {
+      if (!detailItem.value) return;
+      saving.value = true;
+      try {
+        var data = {
+          date: detailItem.value.date.replace(/-/g, '/'),
+          storeName: detailItem.value.storeName,
+          amount: detailItem.value.amount,
+          taxRate: detailItem.value.taxRate,
+          accountTitle: detailItem.value.accountTitle,
+          paymentMethod: detailItem.value.paymentMethod,
+          description: detailItem.value.description,
+          status: detailItem.value.status
+        };
+        await gas('updateExpense', detailItem.value.rowIndex, data);
+        notify('更新しました', 'success');
+        detailItem.value = null;
+        loadExpenses();
+      } catch (e) {
+        notify('更新に失敗しました: ' + e.message, 'error');
+      } finally {
+        saving.value = false;
+      }
+    }
+
+    function confirmDeleteDetail() {
+      showDeleteConfirm.value = true;
+    }
+
+    async function deleteDetail() {
+      if (!detailItem.value) return;
+      try {
+        await gas('deleteExpense', detailItem.value.rowIndex);
+        notify('削除しました', 'success');
+        showDeleteConfirm.value = false;
+        detailItem.value = null;
+        loadExpenses();
+      } catch (e) {
+        notify('削除に失敗しました: ' + e.message, 'error');
+      }
+    }
+
+    // --- CSV ---
+    async function previewCsv() {
+      csvLoading.value = true;
+      try {
+        var filters = { year: csvYear.value };
+        if (csvMonth.value) filters.month = csvMonth.value;
+        var result = JSON.parse(await gas('exportYayoiCsv', filters));
+        if (result.success) {
+          csvPreview.value = result;
+        } else {
+          csvPreview.value = { count: 0, totalAmount: 0 };
+          notify(result.message, 'warning');
+        }
+      } catch (e) {
+        notify('プレビューに失敗しました: ' + e.message, 'error');
+      } finally {
+        csvLoading.value = false;
+      }
+    }
+
+    function downloadCsv() {
+      if (!csvPreview.value || !csvPreview.value.csv) return;
+      try {
+        // UTF-8 → Shift-JIS変換
+        var unicodeArray = Encoding.stringToCode(csvPreview.value.csv);
+        var sjisArray = Encoding.convert(unicodeArray, { to: 'SJIS', from: 'UNICODE' });
+        var uint8Array = new Uint8Array(sjisArray);
+        var blob = new Blob([uint8Array], { type: 'text/csv;charset=Shift_JIS' });
+
+        // ファイル名生成
+        var monthStr = csvMonth.value ? String(csvMonth.value).padStart(2, '0') : 'all';
+        var fileName = 'yayoi_export_' + csvYear.value + '_' + monthStr + '.csv';
+
+        // ダウンロード
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        notify('CSVをダウンロードしました', 'success');
+      } catch (e) {
+        notify('ダウンロードに失敗しました: ' + e.message, 'error');
+      }
+    }
+
+    // --- ユーティリティ ---
+    function formatNumber(n) {
+      return Number(n || 0).toLocaleString();
+    }
+
+    return {
+      currentTab, switchTab,
+      captureStep, analyzing, saving,
+      // 撮影
+      imagePreview, userMemo, fileInput, transferFileInput, bankFileInput,
+      transferPurpose, transferPurposeOptions,
+      handleFileSelect, clearImage, startReceiptCapture, startTransferCapture, startBankCapture, startManualInput,
+      analyzeReceipt, analyzeTransfer, analyzeBankStatement,
+      // 通帳/明細
+      bankTransactions, bankSelectedIds, bankImageUrl, bankEditItems,
+      bankSelectedTotal, bankEditTotal,
+      toggleAllBankSelect, toggleBankSelect, goToBankConfirm, removeBankEditItem, saveBatchIncome,
+      // 手動入力
+      manualDate, manualAmount, manualMemo, analyzeText,
+      // フォローアップ
+      followUpQuestions, followUpAnswers, submitFollowUp,
+      // 確認
+      analysisResult,
+      editDate, editStoreName, editAmount, editTaxRate,
+      editAccountTitle, editDescription, editPaymentMethod,
+      editTransferFee, saveTransferFee,
+      paymentMethods,
+      saveExpense,
+      // 一覧
+      expenses, listLoading, filterYear, filterMonth, filterTransactionType, yearOptions,
+      totalAmount, expenseTotal, incomeTotal, loadExpenses, openDetail,
+      detailItem, updateDetail, confirmDeleteDetail, deleteDetail,
+      showDeleteConfirm,
+      // CSV
+      csvYear, csvMonth, csvPreview, csvLoading,
+      previewCsv, downloadCsv,
+      // util
+      formatNumber
+    };
+  }
+});
+
+app.mount('#app');
+</script>
+</body>
+</html>
